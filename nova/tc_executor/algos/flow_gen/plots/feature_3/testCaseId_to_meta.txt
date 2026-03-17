@@ -1,0 +1,87 @@
+0:
+
+
+Open the application.
+The Welcome Screen is displayed.,The app's logo is visible at the top of the screen.,The app's tagline 'All of the friends. null of the fear.' is displayed below the logo.
+
+
+
+1:
+User is on the Sign Up Form.,User has entered an email address that is already associated with an existing account.,User has set and repeated the password.,User has agreed to the terms and conditions.
+
+Tap the 'Create account' button.
+An 'Account Already Exists' dialog is displayed.,The dialog notifies the user that an account with the entered email address already exists.
+
+
+
+2:
+User is on the 'Verification Code Screen'.
+
+Tap the 'Send a new code' link.
+A new verification code is sent to the user's email address.,The 'Verification Code Screen' remains displayed.
+
+
+
+3:
+User is on the Welcome Screen.
+
+Tap the 'Sign up' button.
+The Sign Up Form is displayed.
+
+
+
+4:
+User is on the Sign Up Form.
+
+Enter a valid email address in the 'Email' field.
+The email address is displayed in the 'Email' field.
+
+Enter a password in the 'Set a password' field.
+The password is masked in the 'Set a password' field.
+
+Repeat the same password in the 'Repeat your password' field.
+The password is masked in the 'Repeat your password' field.
+
+Tap the checkbox to agree to the terms and conditions.
+The checkbox is checked, indicating agreement to the terms and conditions.
+
+Tap the checkbox to opt-in to receive occasional email updates.
+The checkbox is checked (or remains unchecked if the user chooses not to opt-in), indicating the user's preference for email updates.
+
+
+
+5:
+The 'Get Support Dialog' is displayed.
+
+Verify the presence of the support email address.
+The support email address 'support@spoony.app' is displayed in the dialog.
+
+
+
+6:
+User is on the Verification Code Screen.,User has received a verification code.
+
+Enter the received verification code in the 'Enter your code' field.
+The entered verification code is displayed in the 'Enter your code' field.
+
+Tap the 'Verify' button.
+If the code is correct, the user is redirected to the next screen in the onboarding flow.,If the code is incorrect, an error message is displayed, prompting the user to try again or request a new code.
+
+
+
+7:
+The 'Account Already Exists' dialog is displayed.
+
+Tap the 'Log in' button on the dialog.
+The user is redirected to the Log In screen.
+
+
+
+8:
+User is on the Verification Code Screen.
+
+Verify the presence of the message.
+The message 'We've sent a code to <email@spoon.app> It's valid for 15 minutes, so now's the time for hyper-focus!' is displayed on the screen.
+
+
+

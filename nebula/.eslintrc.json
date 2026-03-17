@@ -1,0 +1,8 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "ignorePatterns": [
+    "src/app/(static)/",
+    "src/app/(editor)/",
+    "src/app/viewer/"
+  ]
+}

@@ -1,0 +1,46 @@
+<instruction>
+You will see an emulator, on the left. You will be given instructions regarding, executing a test case. you have to execute the instructions on the emulator. 
+</instruction>
+
+<test_case_format>
+test_case_description - only for reference
+preconditions - only for reference
+Step description - meant to execute
+Expected outcome
+preconditions represents the state on the app. The steps must be executed only if the preconditions are met. You do not have to execute any preconditions. They are only meant to check
+</test_case_format>
+
+<task>
+Given the test case, execute the steps on the emulator, see if the outcome is matched. If the outcome does not match then stop the execution. After the execution, you have to generate a report mentioning status of the test case execution. Return the following json output:
+{"Status": Either "Pass" or "Fail", "Rationale": short explaination behind the status}
+Note that do not return any extra text, only return the JSON output
+</task>
+
+<credentials>
+Depending upon the test cases, you can use the following informations:
+- Email id: agent+spoony_20250308_0938@qaitech.ai
+- Password: passwordpassword
+</credentials>
+
+<mobile_usage_guidelines>
+1 - A check box is considered as clicked if it turns pink.
+</mobile_usage_guidelines>
+
+<strict_instructions>
+1 - Always double check the cursor coordinates twice
+2 - Some actions might introduce loading, if you see any loading symbol on button or somewhere else, introduce wait for 2 seconds until loading is finished and then take the screenshot.
+</strict_instructions>
+
+Following is the test case details:
+{
+  "test_case_description": "Verify that the user can tap on the 'Verify' button to proceed with the password reset",
+  "preconditions": [
+    "User is on the Forgot Password - Verification Code screen",
+    "User has entered the verification code"
+  ],
+  "step_description": "Tap on the 'Verify' button.",
+  "expected_results": [
+    "If the code is correct, the application navigates to the 'Update Password' screen.",
+    "If the code is incorrect, an error message is displayed."
+  ]
+}

@@ -1,0 +1,59 @@
+<instruction>
+You will see an emulator, on the left. You will be given instructions regarding, executing a test case. you have to execute the instructions on the emulator. 
+</instruction>
+
+<test_case_format>
+test_case_description - only for reference
+preconditions - only for reference
+Step description - meant to execute
+Expected outcome
+locations - this well help you nevigate the cursor on the screen
+preconditions represents the state on the app. The steps must be executed only if the preconditions are met. You do not have to execute any preconditions. They are only meant to check, if you see that the preconditions are not matched only then execute necessary steps by your own intelligance to reach the specified preconditions.
+</test_case_format>
+
+<task>
+Given the test case, execute the steps on the emulator, see if the outcome is matched. If the outcome does not match then stop the execution. After the execution, you have to generate a report mentioning status of the test case execution. Return the following json output:
+{"Status": Either "Pass" or "Fail", "Rationale": short explaination behind the status}
+Note that do not return any extra text, only return the JSON output
+</task>
+
+<credentials>
+Depending upon the test cases, you can use the following informations:
+- Email id: agent+spoony_20250308_0938@qaitech.ai
+- Password: passwordpassword
+- Date of Birth - 01-01-1998
+</credentials>
+
+<grid>
+Mobile screen is devided into two parts
+- left half
+- right half
+</grid>
+
+<mobile_usage_guidelines>
+1 - A check box is considered as clicked if it turns pink.
+</mobile_usage_guidelines>
+
+<strict_instructions>
+1 - Always double check the cursor coordinates twice
+2 - Some actions might introduce loading, if you see any loading symbol on button or somewhere else, introduce wait for 2 seconds until loading is finished and then take the screenshot.
+3 - be regorous when you verify if the expected output matches with the current state or not
+4 - Think twice before reasoning
+5 - Test case steps has to be performed atleast once even if you think the output conditions are already matched
+6 - Use locations mentioned in the test case to navigate to the correct location on the screen
+</strict_instructions>
+
+Following is the test case details:
+{
+  "test_case_description": "Verify that the user can tap 'Continue' to proceed to the next screen from the Onboarding Form screen after filling in the required fields.",
+  "preconditions": [
+    "User is on the Onboarding Form screen.",
+  ],
+  "step_description": "Click on year drop down (solid small triangle button).",
+  "expected_results": [
+    "List of years appears"
+  ],
+  "locations": {
+    "solid small triangle button": "left half of the mobile screen"
+  }
+}

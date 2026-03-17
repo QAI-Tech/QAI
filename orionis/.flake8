@@ -1,0 +1,11 @@
+[flake8]
+max-line-length = 150
+exclude = 
+    .venv
+    venv
+    prompts.py
+    prompts_v2.py
+per-file-ignores =
+    src/test_case_planning/kg_flow_analyzer/kg_flow_analyzer.py: E203
+    src/verification/translation_verification/translation_verifier.py: E203
+    src/llm_model.py: E203

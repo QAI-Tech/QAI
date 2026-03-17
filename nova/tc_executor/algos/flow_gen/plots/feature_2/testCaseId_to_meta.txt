@@ -1,0 +1,163 @@
+0:
+
+
+On the Login screen, enter a valid email address in the 'E-mail' field.
+The entered email address is displayed in the 'E-mail' field.
+
+Enter a valid password in the 'Password' field.
+The entered password is displayed in the 'Password' field, obscured for security.
+
+
+
+1:
+User is on the Forgot Password - Account Doesn't Exist Popup screen
+
+Tap on the 'Create new account' button.
+The application navigates to the account creation flow or sign-up screen.
+
+
+
+2:
+User is on the Account Doesn't Exist Popup screen
+
+Tap on the 'Create new account' button.
+The application navigates to the account creation flow or sign-up screen
+
+
+
+3:
+User is on the Forgot Password - Verification Code screen
+
+Verify that the message indicating that a verification code has been sent is displayed.
+The user can see the message on the screen
+
+
+
+4:
+User is on the Forgot Password - Email Entry screen,User has entered their email address
+
+Tap on the 'Send code' button.
+The application sends a verification code to the entered email address.,The application navigates to the 'Forgot Password - Verification Code' screen.
+
+
+
+5:
+User is on the Login screen.
+
+Tap on the 'Forgot password?' button.
+The application navigates to the 'Forgot Password - Email Entry' screen.
+
+
+
+6:
+User is on the Forgot Password - Verification Code screen,User has entered the verification code
+
+Tap on the 'Verify' button.
+If the code is correct, the application navigates to the 'Update Password' screen.,If the code is incorrect, an error message is displayed.
+
+
+
+7:
+User is on the Forgot Password - Account Doesn't Exist Popup screen
+
+Tap on the 'try again' button.
+The application navigates back to the Forgot Password - Email Entry screen
+
+
+
+8:
+User is on the Forgot Password - Verification Code screen
+
+Enter the verification code in the code field.
+The entered code is displayed in the code field.
+
+
+
+9:
+User is on the Forgot Password - Email Entry screen
+
+Enter a valid email address in the email field.
+The entered email address is displayed in the field.
+
+
+
+10:
+User is on the Request Timed Out Popup screen
+
+Tap on the 'Create new account' button.
+The application navigates to the account creation flow or sign-up screen.
+
+
+
+11:
+User is on the Forgot Password - Account Doesn't Exist Popup screen
+
+Verify that the error message is displayed on the screen.
+User should be able to see the error message on the screen
+
+
+
+12:
+User is on the Account Doesn't Exist Popup screen
+
+Verify that the error message is displayed on the screen.
+User should be able to see the error message on the screen
+
+
+
+13:
+User is on the Request Timed Out Popup screen
+
+Tap on the 'try again' button.
+The application navigates back to the Login screen or the previous screen where the request timed out.
+
+
+
+14:
+User is on the Forgot Password - Verification Code screen
+
+Tap on the 'Send a new code' button.
+A new verification code is sent to the user's email address.,The code field is cleared.
+
+
+
+15:
+User is on the Request Timed Out Popup screen
+
+Verify that the error message is displayed on the screen.
+User should be able to see the error message on the screen
+
+
+
+16:
+User is on the Login screen,User has entered their email address,User has entered their password
+
+Tap on the 'continue' button.
+The application attempts to log in the user.
+
+
+
+17:
+User is on the Update Password screen,User has created their new password
+
+Tap on the 'Let's go' button.
+The new password is saved.,The application navigates to the home screen or login screen.
+
+
+
+18:
+User is on the Update Password screen
+
+Create a new password.
+The new password is created and saved.
+
+
+
+19:
+User is on the Account Doesn't Exist Popup screen
+
+Tap on the 'try again' button.
+The application navigates back to the Login screen to re-enter their credentials
+
+
+

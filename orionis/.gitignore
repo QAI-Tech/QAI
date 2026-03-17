@@ -1,0 +1,28 @@
+# Environments
+.env
+!data/.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.vscode/
+**/.DS_Store
+.DS_Store
+.DS_Store?
+
+# Logs & Cache
+__pycache__/
+.mypy_cache/
+
+# Keys
+gcp-service-account.json
+gcp-service-account-production.json
+gmail-service-account-staging.json
+gmail-service-account-production.json
+
+# Media files
+temp
+SCREENSHOTS
+*.mp4

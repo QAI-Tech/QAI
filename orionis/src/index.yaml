@@ -1,0 +1,55 @@
+indexes:
+  - kind: TestRun
+    properties:
+      - name: product_id
+      - name: created_at
+        direction: desc
+
+  - kind: TestCaseUnderExecution
+    properties:
+      - name: test_run_id
+      - name: test_case_created_at
+        direction: asc
+
+  - kind: Feature
+    properties:
+      - name: product_id
+      - name: sort_index
+        direction: desc
+
+  - kind: RawTestCase
+    properties:
+      - name: product_id
+      - name: sort_index
+        direction: desc
+
+  - kind: Credentials
+    properties:
+      - name: product_id
+      - name: created_at
+        direction: desc
+
+  - kind: JiraCredentials
+    properties:
+      - name: product_id
+      - name: created_at
+        direction: desc
+
+  - kind: User
+    properties:
+      - name: organisation_id
+      - name: created_at
+        direction: asc
+
+  - kind: TestCasePlanningRequest
+    properties:
+      - name: product_id
+      - name: status
+      - name: created_at
+        direction: desc
+
+  - kind: QubitPurchase
+    properties:
+      - name: organisation_id
+      - name: created_at
+        direction: desc

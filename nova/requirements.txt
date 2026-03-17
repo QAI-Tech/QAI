@@ -1,0 +1,25 @@
+google-cloud-pubsub
+opencv-python
+scikit-image
+pyautogui
+anthropic
+google-generativeai
+google-cloud-aiplatform
+google-cloud-datastore
+imageio
+imageio-ffmpeg
+sentry-sdk
+flask
+flask-cors
+flask-socketio
+websockets
+numpy
+python-dotenv
+Pillow
+google-cloud-storage
+nanoid
+
+# Web executor dependencies
+browser-use>=0.11.2
+playwright>=1.48.0
+#"browser-use[video]"

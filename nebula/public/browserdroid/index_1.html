@@ -1,0 +1,1066 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Android Emulator Control</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 5px;
+        background: #f5f5f5;
+        margin: 0;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .status-bar {
+        background: #e8f5e8;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-connected {
+        background: #4caf50;
+      }
+
+      .status-disconnected {
+        background: #f44336;
+      }
+
+      .session-controls {
+        text-align: left;
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+      }
+
+      .session-button:hover {
+        background: #0056b3;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+      }
+
+      .session-button.active {
+        background: #e74c3c;
+      }
+
+      .session-button.active:hover {
+        background: #c0392b;
+      }
+
+      .session-button.loading {
+        background: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .session-button.loading:hover {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: flex-start;
+        gap: 20px;
+      }
+
+      .stream-container {
+        width: 100%;
+        position: relative;
+        max-height: 70vh;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #stream {
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: crosshair;
+        max-width: 100%;
+        height: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      #videoStream {
+        max-width: 100%;
+        max-height: 70vh;
+        height: auto;
+        object-fit: contain;
+        /* border: 2px solid #007bff; */
+        border-radius: 8px;
+        cursor: crosshair;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: border-color 0.3s ease;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+
+      #videoStream:hover {
+        border-color: #0056b3;
+        box-shadow: 0 6px 12px rgba(0, 123, 255, 0.2);
+      }
+
+      .stream-container::after {
+        content: "Click to tap • Click and drag to scroll • Type to send text";
+        position: absolute;
+        bottom: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        color: #666;
+        white-space: nowrap;
+        z-index: 10;
+      }
+
+      .coordinate-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-family: monospace;
+        pointer-events: none;
+        z-index: 100;
+        display: none;
+        white-space: nowrap;
+      }
+
+      .controls-panel {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: row;
+        gap: 10px;
+        background: #2c3e50;
+        padding: 10px;
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        justify-content: center;
+        align-items: center;
+      }
+
+      .replay-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-left: 0;
+        width: 100%;
+      }
+
+      /* Base button styles for device controls only */
+      .controls-panel button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 16px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        min-width: 48px;
+        width: 48px;
+        height: 48px;
+      }
+
+      .controls-panel button:hover {
+        background: #2980b9;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .controls-panel button:disabled {
+        background: #7f8c8d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* Session button specific styles */
+      .session-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        white-space: nowrap;
+        width: auto;
+        height: auto;
+        min-width: auto;
+      }
+
+      .session-button:disabled {
+        background: #6c757d;
+        color: #adb5bd;
+        cursor: not-allowed;
+        opacity: 0.7;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .session-button:disabled:hover {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .keyboard-controls {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin: 8px 0;
+      }
+
+      .key-button {
+        padding: 8px;
+        font-size: 14px;
+        min-height: 40px;
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+      }
+
+      .key-button:hover {
+        background: #7f8c8d;
+      }
+
+      .button-icon {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      input[type="file"] {
+        margin: 10px 0;
+        width: 100%;
+        background: #34495e;
+        color: #ecf0f1;
+        border: 1px solid #4a5f7a;
+        border-radius: 5px;
+        padding: 8px;
+      }
+
+      .log {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        height: 100px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+        margin-top: 50px;
+        display: none;
+      }
+
+      @media (max-width: 800px) {
+        .main-content {
+          flex-direction: column;
+        }
+
+        .controls-panel {
+          min-width: auto;
+          /* width: 100%; */
+        }
+      }
+
+      /* API loading overlay styles (now overlays only videoStream) */
+      #apiLoadingOverlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.55);
+        z-index: 1001;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        pointer-events: all;
+        transition: opacity 0.2s;
+        border-radius: 8px;
+      }
+
+      #apiLoadingOverlay.active {
+        display: flex;
+      }
+
+      .api-spinner {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #007bff;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* API action toast styles - bottom right, small, outside video */
+      #apiActionToast {
+        position: fixed;
+        right: 32px;
+        bottom: 32px;
+        min-width: 180px;
+        max-width: 320px;
+        background: #222;
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 500;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 3000;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+        transition:
+          opacity 0.3s,
+          bottom 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #apiActionToast.show {
+        opacity: 1;
+        bottom: 48px;
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+
+  <body tabindex="0">
+    <div class="container">
+      <div class="status-bar">
+        <div>
+          <span class="status-indicator" id="connectionStatus"></span>
+          <span id="connectionText">Checking connection...</span>
+        </div>
+        <div style="display: none">
+          <span id="streamStatus">Stream: Inactive</span>
+          <span id="resolutionStatus" style="margin-left: 20px"
+            >Resolution: --</span
+          >
+        </div>
+      </div>
+
+      <div
+        class="main-content"
+        style="display: flex; flex-direction: column; align-items: flex-start"
+      >
+        <div class="stream-container" style="position: relative">
+          <img
+            id="videoStream"
+            width="270"
+            height="360"
+            style="
+              border-radius: 8px;
+              cursor: crosshair;
+              max-width: 100%;
+              height: auto;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            "
+            alt="Android Device Stream"
+          />
+          <div id="apiLoadingOverlay">
+            <div class="api-spinner"></div>
+          </div>
+          <div class="coordinate-overlay" id="coordinateOverlay">
+            X: 0, Y: 0
+          </div>
+          <div
+            id="busyOverlay"
+            style="
+              display: none;
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: rgba(0, 0, 0, 0.85);
+              color: white;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              z-index: 20;
+              border-radius: 8px;
+            "
+          >
+            <h3 style="margin-bottom: 10px">⚠️ Device Busy</h3>
+            <p id="busyMessage" style="text-align: center; padding: 0 20px">
+              Another user is currently using this device.
+            </p>
+          </div>
+        </div>
+        <button
+          id="screenshotBtn"
+          onclick="takeScreenshot()"
+          style="
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px;
+            background-color: #7d3bed;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          "
+        >
+          <span>📷</span> Take Screenshot
+        </button>
+      </div>
+
+      <div class="log" id="log"></div>
+    </div>
+    <div id="apiActionToast"></div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      const videoStream = document.getElementById("videoStream");
+      const connectionStatus = document.getElementById("connectionStatus");
+      const connectionText = document.getElementById("connectionText");
+      const streamStatus = document.getElementById("streamStatus");
+      const resolutionStatus = document.getElementById("resolutionStatus");
+      const params = new URLSearchParams(window.location.search);
+      const server = params.get("server");
+      const userId = params.get("userId");
+      const logElement = document.getElementById("log");
+      let socket = null;
+      let deviceResolution = { width: 1080, height: 1920 }; // Default, will be updated
+      let clickIndicator = null;
+      let isMouseOverVideo = false; // Track if mouse is over video stream
+      let isControlDisabled = false; // Track if controls are disabled
+      let dragEndX = 0;
+      let dragEndY = 0;
+
+      async function authenticatedFetch(url, options = {}) {
+        const urlObj = new URL(url, window.location.origin);
+        urlObj.searchParams.append("userId", userId);
+
+        const response = await fetch(urlObj.toString(), options);
+        if (response.status === 403) {
+          const data = await response.json();
+          log(`Error: ${data.error}`);
+          throw new Error(data.error);
+        }
+        return response;
+      }
+
+      // --- API Loading Overlay helpers ---
+      function showApiLoading() {
+        document.getElementById("apiLoadingOverlay").classList.add("active");
+      }
+      function hideApiLoading() {
+        document.getElementById("apiLoadingOverlay").classList.remove("active");
+      }
+
+      // --- API Action Toast helpers ---
+      function showApiActionToast(message) {
+        const toast = document.getElementById("apiActionToast");
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(window._apiToastTimeout);
+        window._apiToastTimeout = setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1800);
+      }
+
+      // Initialize
+      checkAllStatus(); // Get all status info on startup
+      setInterval(checkAllStatus, 10000); // Check all status every 10 seconds
+
+      const KEYCODE_LABELS = {
+        3: "HOME",
+        4: "BACK",
+        24: "VOLUME_UP",
+        25: "VOLUME_DOWN",
+        26: "POWER",
+      };
+
+      function emitBrowserdroidAction(actionType, details = {}) {
+        window.parent.postMessage(
+          {
+            type: "BROWSERDROID_ACTION",
+            payload: {
+              actionType,
+              details,
+              timestamp: Date.now(),
+              server,
+              deviceResolution,
+            },
+          },
+          window.location.origin,
+        );
+      }
+
+      // Create click indicator element
+      function createClickIndicator() {
+        if (clickIndicator) {
+          document.body.removeChild(clickIndicator);
+        }
+
+        clickIndicator = document.createElement("div");
+        clickIndicator.style.cssText = `
+          position: fixed;
+          width: 20px;
+          height: 20px;
+          border: 3px solid #ff4444;
+          border-radius: 50%;
+          background: rgba(255, 68, 68, 0.3);
+          pointer-events: none;
+          z-index: 1000;
+          transform: translate(-50%, -50%);
+          transition: opacity 0.3s ease;
+        `;
+        document.body.appendChild(clickIndicator);
+      }
+
+      // Show click indicator
+      function showClickIndicator(x, y) {
+        if (!clickIndicator) {
+          createClickIndicator();
+        }
+
+        clickIndicator.style.left = x + "px";
+        clickIndicator.style.top = y + "px";
+        clickIndicator.style.opacity = "1";
+
+        // Hide after 1 second
+        setTimeout(() => {
+          if (clickIndicator) {
+            clickIndicator.style.opacity = "0";
+          }
+        }, 1000);
+      }
+
+      // Get all status information from server
+      async function checkAllStatus() {
+        try {
+          const response = await authenticatedFetch(`${server}/status`);
+          const status = await response.json();
+
+          // Update connection status
+          if (status.adb_connected) {
+            connectionStatus.className = "status-indicator status-connected";
+            connectionText.textContent = "Connected";
+          } else {
+            connectionStatus.className = "status-indicator status-disconnected";
+            connectionText.textContent = "Disconnected";
+          }
+
+          // Update stream status
+          updateStreamStatus(status.streaming_active);
+
+          // Update device resolution
+          if (status.screen_resolution) {
+            deviceResolution = status.screen_resolution;
+            updateCoordinatePlaceholders(); // Update resolution display
+          }
+        } catch (error) {
+          connectionStatus.className = "status-indicator status-disconnected";
+          connectionText.textContent = "Connection Error";
+          updateStreamStatus(false);
+          log(`Status check failed: ${error.message}`);
+        }
+      }
+
+      // Calculate tap coordinates from click event
+      function calculateTapCoordinates(e) {
+        const rect = e.target.getBoundingClientRect();
+        const scaleX = deviceResolution.width / rect.width;
+        const scaleY = deviceResolution.height / rect.height;
+
+        const x = Math.floor((e.clientX - rect.left) * scaleX);
+        const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+        // Ensure coordinates are within bounds
+        const clampedX = Math.max(0, Math.min(x, deviceResolution.width - 1));
+        const clampedY = Math.max(0, Math.min(y, deviceResolution.height - 1));
+
+        return { x: clampedX, y: clampedY };
+      }
+
+      // Update resolution status display
+      function updateCoordinatePlaceholders() {
+        // Update resolution status display
+        if (resolutionStatus) {
+          resolutionStatus.textContent = `Resolution: ${deviceResolution.width}x${deviceResolution.height}`;
+        }
+        setVideoStreamAspectRatio();
+      }
+
+      // --- IMPROVED: Maintain device aspect ratio for videoStream ---
+      function setVideoStreamAspectRatio() {
+        if (!videoStream || !deviceResolution.width || !deviceResolution.height)
+          return;
+        const aspect = deviceResolution.width / deviceResolution.height;
+        videoStream.style.aspectRatio = `${deviceResolution.width} / ${deviceResolution.height}`;
+        // Optionally, set maxWidth/maxHeight to fit container
+        videoStream.style.maxWidth = "100%";
+        videoStream.style.height = "auto";
+      }
+
+      // Debug function to show scaling information
+      function debugScaling() {
+        const rect = videoStream.getBoundingClientRect();
+        const scaleX = deviceResolution.width / rect.width;
+        const scaleY = deviceResolution.height / rect.height;
+
+        log(`🔍 Debug Scaling:`);
+        log(
+          `  Video display: ${Math.round(rect.width)}x${Math.round(
+            rect.height,
+          )}`,
+        );
+        log(
+          `  Device resolution: ${deviceResolution.width}x${deviceResolution.height}`,
+        );
+        log(`  Scale factors: X=${scaleX.toFixed(3)}, Y=${scaleY.toFixed(3)}`);
+      }
+
+      // Initialize WebSocket connection
+      function initWebSocket() {
+        try {
+          socket = io(server, {
+            query: { userId: userId },
+          });
+
+          socket.on("connect", () => {
+            log("WebSocket connected");
+            socket.emit("start_stream");
+          });
+
+          socket.on("disconnect", () => {
+            log("WebSocket disconnected");
+          });
+
+          socket.on("connect_error", (error) => {
+            log(`WebSocket connection error: ${error.message}`);
+          });
+
+          socket.on("video_controls", (data) => {
+            if (data.pause) {
+              log("Video controls paused by server");
+              isControlDisabled = true;
+              videoStream.style.cursor = "not-allowed";
+            } else {
+              log("Video controls enabled by server");
+              isControlDisabled = false;
+              videoStream.style.cursor = isMouseOverVideo
+                ? "crosshair"
+                : "default";
+            }
+          });
+
+          socket.on("screenshot", (data) => {
+            try {
+              // Display the image directly with optimized loading
+              const newSrc = "data:image/png;base64," + data.image;
+              if (videoStream.src !== newSrc) {
+                videoStream.src = newSrc;
+              }
+            } catch (error) {
+              log(`Screenshot processing error: ${error.message}`);
+            }
+          });
+
+          socket.on("request_id", (data) => {
+            log(`request_id: ${data.request_id}`);
+            window.parent.postMessage({ requestId: data.request_id }, "*");
+          });
+
+          socket.on("stream_status", (data) => {
+            updateStreamStatus(data.active);
+          });
+
+          socket.on("error", (data) => {
+            log(`Server error: ${data.message}`);
+            if (
+              data.message &&
+              data.message.includes("Device is currently busy")
+            ) {
+              const overlay = document.getElementById("busyOverlay");
+              const msg = document.getElementById("busyMessage");
+              if (overlay && msg) {
+                msg.textContent = data.message;
+                overlay.style.display = "flex";
+              }
+              isControlDisabled = true;
+              videoStream.style.cursor = "not-allowed";
+            }
+          });
+
+          socket.on("status", (data) => {
+            log(data.message);
+          });
+        } catch (error) {
+          log(`WebSocket initialization error: ${error.message}`);
+        }
+      }
+
+      // Start WebSocket video stream
+      function startStream() {
+        log("Starting WebSocket video stream...");
+        // Check if Socket.IO is loaded
+        if (typeof io === "undefined") {
+          log("ERROR: Socket.IO library not loaded!");
+          return;
+        }
+        initWebSocket();
+      }
+
+      // Wait for page to load before starting
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", startStream);
+      } else {
+        startStream();
+      }
+
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        logElement.innerHTML += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      function updateStreamStatus(active) {
+        streamStatus.textContent = `Stream: ${active ? "Active" : "Inactive"}`;
+      }
+
+      // Stream drag-to-scroll handling
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let lastDragX = 0;
+      let lastDragY = 0;
+
+      videoStream.addEventListener("mousedown", function (e) {
+        if (isControlDisabled) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        isDragging = true;
+        const rect = e.target.getBoundingClientRect();
+        dragStartX = e.clientX - rect.left;
+        dragStartY = e.clientY - rect.top;
+        lastDragX = dragStartX;
+        lastDragY = dragStartY;
+        dragEndX = dragStartX;
+        dragEndY = dragStartY;
+        cumulativeDeltaX = 0;
+        cumulativeDeltaY = 0;
+        videoStream.style.cursor = "grabbing";
+        e.preventDefault();
+      });
+
+      videoStream.addEventListener("mousemove", function (e) {
+        if (isControlDisabled) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        if (!isDragging) return;
+        const rect = e.target.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        dragEndX = currentX;
+        dragEndY = currentY;
+        lastDragX = currentX;
+        lastDragY = currentY;
+        e.preventDefault();
+      });
+
+      videoStream.addEventListener("mouseup", function (e) {
+        if (isControlDisabled) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        if (isDragging) {
+          isDragging = false;
+          videoStream.style.cursor = "crosshair";
+          const rect = e.target.getBoundingClientRect();
+          const endX = e.clientX - rect.left;
+          const endY = e.clientY - rect.top;
+          dragEndX = endX;
+          dragEndY = endY;
+          const totalDistance = Math.sqrt(
+            Math.pow(dragEndX - dragStartX, 2) +
+              Math.pow(dragEndY - dragStartY, 2),
+          );
+          const dragThreshold = 20; // px on image
+          if (totalDistance < dragThreshold) {
+            // Treat as tap
+            const { x, y } = calculateTapCoordinates(e);
+            const mouseX = Math.floor(endX);
+            const mouseY = Math.floor(endY);
+            log(`🖱️ Mouse: (${mouseX}, ${mouseY}) → 📱 Device: (${x}, ${y})`);
+            showClickIndicator(e.clientX, e.clientY);
+            tap(x, y);
+          } else {
+            // Treat as swipe
+            // Scale dragStart and dragEnd to device coordinates
+            const rect = videoStream.getBoundingClientRect();
+            const scaleX = deviceResolution.width / rect.width;
+            const scaleY = deviceResolution.height / rect.height;
+            const x1 = Math.floor(dragStartX * scaleX);
+            const y1 = Math.floor(dragStartY * scaleY);
+            const x2 = Math.floor(dragEndX * scaleX);
+            const y2 = Math.floor(dragEndY * scaleY);
+            // Duration proportional to distance, clamp 150-500ms
+            const deviceDist = Math.sqrt(
+              Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2),
+            );
+            const duration = Math.max(
+              150,
+              Math.min(500, Math.round(deviceDist / 2)),
+            );
+            log(
+              `🖱️ Swipe: (${dragStartX.toFixed(0)},${dragStartY.toFixed(0)})→(${dragEndX.toFixed(0)},${dragEndY.toFixed(0)}) | Device: (${x1},${y1})→(${x2},${y2}), duration: ${duration}ms`,
+            );
+            swipe(x1, y1, x2, y2, duration);
+          }
+        }
+      });
+
+      // Show coordinates on hover
+      videoStream.addEventListener("mousemove", function (e) {
+        if (isControlDisabled) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        const { x, y } = calculateTapCoordinates(e);
+        videoStream.title = `Click to tap at (${x}, ${y})`;
+
+        // Update coordinate overlay with device coordinates
+        const overlay = document.getElementById("coordinateOverlay");
+        if (overlay) {
+          overlay.textContent = `Device: (${x}, ${y})`;
+          overlay.style.display = "block";
+        }
+      });
+
+      // Track mouse enter/leave for keyboard input control
+      videoStream.addEventListener("mouseenter", function (e) {
+        if (isControlDisabled) {
+          e.stopPropagation();
+          e.preventDefault();
+          videoStream.style.cursor = "not-allowed";
+          return;
+        }
+        isMouseOverVideo = true;
+        videoStream.style.borderColor = "#28a745"; // Green border to indicate keyboard input is active
+        log("⌨️ Keyboard input active - mouse over device");
+        // Focus the body to ensure keydown events are received
+        document.body.focus();
+      });
+
+      videoStream.addEventListener("mouseleave", function (e) {
+        if (isControlDisabled) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        // Handle dragging state
+        if (isDragging) {
+          isDragging = false;
+          videoStream.style.cursor = "crosshair";
+        }
+
+        // Handle keyboard input state
+        isMouseOverVideo = false;
+        videoStream.style.borderColor = "#007bff"; // Blue border when keyboard input is inactive
+
+        // Hide coordinate overlay
+        const overlay = document.getElementById("coordinateOverlay");
+        if (overlay) {
+          overlay.style.display = "none";
+        }
+
+        log("⌨️ Keyboard input inactive - mouse left device");
+      });
+
+      async function tap(x, y) {
+        try {
+          // Validate coordinates
+          if (
+            x < 0 ||
+            x >= deviceResolution.width ||
+            y < 0 ||
+            y >= deviceResolution.height
+          ) {
+            log(
+              `Invalid coordinates: (${x}, ${y}) - Device resolution: ${deviceResolution.width}x${deviceResolution.height}`,
+            );
+            return;
+          }
+          showApiLoading();
+          videoStream.style.cursor = "not-allowed";
+          const response = await authenticatedFetch(
+            `${server}/device/tap?x=${x}&y=${y}`,
+            {
+              method: "POST",
+            },
+          );
+          const result = await response.json();
+          if (result.status === "success") {
+            log(
+              `✅ Tap at (${x}, ${y}) - Device: ${deviceResolution.width}x${deviceResolution.height}`,
+            );
+            emitBrowserdroidAction("tap", { coordinates: { x, y } });
+            showApiActionToast("Tap action performed!");
+          } else {
+            log(`❌ Tap failed: ${result.error}`);
+            showApiActionToast("Tap failed");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } catch (error) {
+          log(`❌ Tap error: ${error.message}`);
+          showApiActionToast("Tap error");
+        } finally {
+          hideApiLoading();
+          videoStream.style.cursor = isMouseOverVideo ? "crosshair" : "default";
+        }
+      }
+
+      async function swipe(x1, y1, x2, y2, duration) {
+        try {
+          // --- IMPROVED: Use a slightly longer duration for smoother swipe ---
+          duration = Math.max(200, duration || 200); // at least 200ms
+          showApiLoading();
+          videoStream.style.cursor = "not-allowed";
+          const response = await authenticatedFetch(`${server}/device/swipe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ x1, y1, x2, y2, duration }),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            log(`Swipe from (${x1}, ${y1}) to (${x2}, ${y2})`);
+            emitBrowserdroidAction("swipe", {
+              start: { x: x1, y: y1 },
+              end: { x: x2, y: y2 },
+              duration,
+            });
+            showApiActionToast("Swipe action performed!");
+          } else if (result.status === "ignored") {
+            console.log(`Swipe ignored: ${result.message}`);
+            showApiActionToast("Swipe ignored");
+          } else {
+            log(`Swipe failed: ${result.error}`);
+            showApiActionToast("Swipe failed");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        } catch (error) {
+          log(`Swipe error: ${error.message}`);
+          showApiActionToast("Swipe error");
+        } finally {
+          hideApiLoading();
+          videoStream.style.cursor = isMouseOverVideo ? "crosshair" : "default";
+        }
+      }
+
+      async function takeScreenshot() {
+        try {
+          const videoStream = document.getElementById("videoStream");
+          if (!videoStream || !videoStream.src || videoStream.src === "") {
+            log("No video stream available to screenshot");
+            showApiActionToast("No video stream");
+            return;
+          }
+
+          // Create a canvas to draw the current frame
+          const canvas = document.createElement("canvas");
+          canvas.width = videoStream.naturalWidth || videoStream.width;
+          canvas.height = videoStream.naturalHeight || videoStream.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(videoStream, 0, 0, canvas.width, canvas.height);
+
+          // Convert to data URL
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+          // Send to parent
+          window.parent.postMessage(
+            {
+              type: "SCREENSHOT_CAPTURED",
+              payload: {
+                image: dataUrl,
+                timestamp: Date.now(),
+                server,
+                deviceResolution,
+              },
+            },
+            "*",
+          );
+
+          log("Screenshot taken (sent to parent)");
+        } catch (error) {
+          log(`Screenshot error: ${error.message}`);
+          showApiActionToast("Screenshot error");
+        }
+      }
+    </script>
+  </body>
+</html>
