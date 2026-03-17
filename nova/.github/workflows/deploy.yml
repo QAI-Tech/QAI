@@ -1,0 +1,49 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: qai-tech-staging
+  REGION: europe-west3
+  REPO: nova-repo
+  IMAGE: nova
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Set tag to latest
+        id: vars
+        run: echo "TAG=latest" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE }}:${{ env.TAG }} .
+
+      - name: Tag Docker image for Artifact Registry
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}:${{ env.TAG }}"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          docker tag ${{ env.IMAGE }}:${{ env.TAG }} $IMAGE_URI
+
+      - name: Push Docker image
+        run: docker push $IMAGE_URI

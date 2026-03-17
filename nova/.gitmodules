@@ -1,0 +1,8 @@
+[submodule "droidrun"]
+	path = droidrun
+	url = https://github.com/QAI-Tech/droidrun.git
+	branch = droidrunIntegration
+[submodule "browser-use"]
+	path = browser-use
+	url = https://github.com/QAI-Tech/browser-use.git
+	branch = main

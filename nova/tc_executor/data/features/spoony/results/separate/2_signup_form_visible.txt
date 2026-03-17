@@ -1,0 +1,34 @@
+On the desktop you will see the emulator for mobile apps on the left and there will be a terminal on the right.
+Task: you have to test the following feature on the mobile app - spoony
+On the emulator you will see the preconditions already matched.
+You have to execute the step_description, and see if the desired expected results has been achived or not.
+
+You have to return in the results in the following json format without any extra text or space
+{
+  "Status": "Passed" or "Failed",
+  "Rationale": Rationale behind the result,
+}
+The returned keys and values must be strings. Do not return any extra text in the result.
+Make sure that you only return the json object.
+
+Feature Test JSON:
+{
+      "preconditions": [
+        "User is on the Welcome Screen."
+      ],
+      "test_case_description": "Verify that the user can navigate to the Sign Up Form by tapping the 'Sign up' button on the Welcome Screen.",
+      "test_case_steps": [
+        {
+          "expected_results": [
+            "The Sign Up Form is displayed."
+          ],
+          "step_description": "Tap the 'Sign up' button.",
+        }
+      ],
+    }
+
+----------------- Output ----------------
+{
+  "Status": "Passed",
+  "Rationale": "After tapping the 'Sign up' button on the Welcome Screen, the Sign Up Form was successfully displayed showing email input field, password fields, terms and conditions checkbox, and create account button."
+}

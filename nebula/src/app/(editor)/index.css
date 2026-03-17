@@ -1,0 +1,295 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --duration-fast: 150ms;
+    --duration-normal: 200ms;
+    --duration-slow: 300ms;
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Flow highlighting colors */
+    --flow-start: 142 76% 36%;
+    --flow-end: 0 84% 60%;
+    --flow-via: 217 91% 60%;
+    --flow-branch: 38 92% 50%;
+    --flow-path: 220 13% 69%;
+  }
+
+  /* Home V2 theme overrides */
+  .homev2-theme {
+    --accent: 262.1 83.3% 57.8%;
+    --accent-foreground: 210 40% 98%;
+    --ring: 262 83% 58%;
+    --radius: 0.625rem;
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 240 5% 26%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 260 10% 96%;
+    --sidebar-accent-foreground: 240 10% 10%;
+    --sidebar-border: 260 10% 92%;
+    --sidebar-ring: 262 83% 58%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+    font-family: "DM Sans", sans-serif;
+  }
+
+  .dark.homev2-theme {
+    --ring: 262 83% 65%;
+    --accent: 262.1 83.3% 57.8%;
+    --accent-foreground: 210 40% 98%;
+    --sidebar-background: 240 10% 7%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 262 83% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 10% 15%;
+    --sidebar-ring: 262 83% 65%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 222.2 84% 4.9%;
+
+    /* Flow highlighting colors (dark mode) */
+    --flow-start: 142 71% 45%;
+    --flow-end: 0 84% 65%;
+    --flow-via: 217 91% 65%;
+    --flow-branch: 38 92% 55%;
+    --flow-path: 220 13% 78%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer utilities {
+  .nav-item {
+    @apply flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors;
+    transition-duration: var(--duration-fast);
+    min-height: 2rem;
+  }
+
+  .nav-item:hover {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground;
+  }
+
+  .nav-item.active {
+    @apply bg-sidebar-accent text-primary font-medium;
+  }
+
+  @keyframes flow-pulse {
+    0%,
+    100% {
+      opacity: 0.95;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dash {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: 24;
+    }
+  }
+
+  @keyframes plan-flow-pulse {
+    0%,
+    100% {
+      stroke-width: 6;
+      opacity: 1;
+    }
+    50% {
+      stroke-width: 8;
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes background-pulse {
+    0%,
+    100% {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+    50% {
+      background-color: rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  @keyframes purple-background-pulse {
+    0%,
+    100% {
+      background-color: rgba(139, 92, 246, 0.1);
+    }
+    50% {
+      background-color: rgba(139, 92, 246, 0.4);
+    }
+  }
+
+  @keyframes green-background-pulse {
+    0%,
+    100% {
+      background-color: rgba(16, 185, 129, 0.1);
+    }
+    50% {
+      background-color: rgba(16, 185, 129, 0.4);
+    }
+  }
+
+  @keyframes orange-background-pulse {
+    0%,
+    100% {
+      background-color: rgba(245, 158, 11, 0.2);
+    }
+    50% {
+      background-color: rgba(245, 158, 11, 0.5);
+    }
+  }
+
+  @keyframes flash-uncovered-node {
+    0% {
+      background-color: transparent;
+      border-color: transparent;
+    }
+    25% {
+      background-color: rgba(239, 68, 68, 0.8);
+      border-color: rgb(239, 68, 68);
+    }
+    50% {
+      background-color: rgba(239, 68, 68, 0.5);
+      border-color: rgba(239, 68, 68, 0.7);
+    }
+    75% {
+      background-color: rgba(239, 68, 68, 0.8);
+      border-color: rgb(239, 68, 68);
+    }
+    100% {
+      background-color: transparent;
+      border-color: transparent;
+    }
+  }
+
+  @keyframes flash-uncovered-edge {
+    0% {
+      opacity: 0;
+    }
+    25% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes flash-entry-points {
+    0% {
+      background-color: transparent;
+      border-color: transparent;
+    }
+    25% {
+      background-color: rgba(16, 185, 129, 0.8);
+      border-color: rgb(16, 185, 129);
+    }
+    50% {
+      background-color: rgba(16, 185, 129, 0.5);
+      border-color: rgb(16, 185, 129);
+    }
+    75% {
+      background-color: rgba(16, 185, 129, 0.8);
+      border-color: rgb(16, 185, 129);
+    }
+    100% {
+      background-color: transparent;
+      border-color: transparent;
+    }
+  }
+
+  .flow-highlight {
+    animation: flow-pulse 2s ease-in-out infinite;
+  }
+
+  /* Smooth feature collapse/expand animations */
+  .react-flow__node {
+    transition: transform 800ms cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  }
+}

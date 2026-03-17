@@ -1,0 +1,907 @@
+import asyncio
+import logging
+from typing import TYPE_CHECKING, Any, Dict, List
+
+if TYPE_CHECKING:
+    from droidrun.config_manager.config_manager import DeviceConfig, ToolsConfig
+    from droidrun.tools import Tools
+
+from droidrun.agent.oneflows.app_starter_workflow import AppStarter
+
+logger = logging.getLogger(__name__)
+
+
+async def create_tools_from_config(
+    device_config: "DeviceConfig", vision_enabled: bool = True
+) -> "Tools":
+    """
+    Create Tools instance from DeviceConfig.
+
+    Args:
+        device_config: Device configuration
+        vision_enabled: Whether vision is enabled (for filter selection)
+
+    Returns:
+        AdbTools or IOSTools based on config
+
+    Raises:
+        ValueError: If no device found or invalid platform
+    """
+    from async_adbutils import adb
+    from droidrun.tools import AdbTools, IOSTools
+
+    is_ios = device_config.platform.lower() == "ios"
+    device_serial = device_config.serial
+
+    if not is_ios:
+        # Android: auto-detect if not specified
+        if device_serial is None:
+            devices = await adb.list()
+            if not devices:
+                raise ValueError("No connected Android devices found.")
+            device_serial = devices[0].serial
+        return AdbTools(serial=device_serial, vision_enabled=vision_enabled)
+    else:
+        # iOS: require explicit device URL
+        if device_serial is None:
+            raise ValueError("iOS device URL required in config.device.serial")
+        return IOSTools(url=device_serial)
+
+
+async def resolve_tools_instance(
+    tools: "Tools | ToolsConfig | None",
+    device_config: "DeviceConfig",
+    tools_config_fallback: "ToolsConfig | None" = None,
+    credential_manager=None,
+    vision_enabled: bool = True,
+) -> tuple["Tools", "ToolsConfig"]:
+    """
+    Resolve Tools instance and ToolsConfig from various input types.
+
+    This helper allows flexible initialization:
+    - Pass a Tools instance directly (custom or pre-configured)
+    - Pass a ToolsConfig to create Tools from device_config
+    - Pass None to use defaults
+
+    Args:
+        tools: Either a Tools instance, ToolsConfig, or None
+        device_config: Device configuration for creating Tools if needed
+        tools_config_fallback: Fallback ToolsConfig when tools is a Tools instance or None
+        credential_manager: Optional credential manager to attach to Tools
+        vision_enabled: Whether vision is enabled (default: True)
+
+    Returns:
+        Tuple of (tools_instance, tools_config):
+        - If tools is Tools instance: (tools, tools_config_fallback or default)
+        - If tools is ToolsConfig: (created from device_config, tools)
+        - If tools is None: (created from device_config, tools_config_fallback or default)
+
+    Example:
+        >>> # Use custom Tools instance
+        >>> custom_tools = AdbTools(serial="emulator-5554")
+        >>> tools_instance, tools_cfg = resolve_tools_instance(custom_tools, device_config)
+        >>>
+        >>> # Use ToolsConfig (current behavior)
+        >>> tools_cfg = ToolsConfig(disabled_tools=["long_press"])
+        >>> tools_instance, tools_cfg = resolve_tools_instance(tools_cfg, device_config)
+    """
+    # Import at runtime to avoid circular imports
+    from droidrun.config_manager.config_manager import ToolsConfig
+    from droidrun.tools.tools import Tools
+
+    # Case 1: Tools instance provided directly
+    if isinstance(tools, Tools):
+        tools_instance = tools
+        # Use fallback or default ToolsConfig
+        tools_cfg = tools_config_fallback if tools_config_fallback else ToolsConfig()
+
+    # Case 2: ToolsConfig provided
+    elif tools is not None and isinstance(tools, ToolsConfig):
+        tools_instance = await create_tools_from_config(
+            device_config, vision_enabled=vision_enabled
+        )
+        tools_cfg = tools
+
+    # Case 3: None provided
+    else:
+        tools_instance = await create_tools_from_config(
+            device_config, vision_enabled=vision_enabled
+        )
+        tools_cfg = tools_config_fallback if tools_config_fallback else ToolsConfig()
+
+    # Attach credential manager if provided
+    if credential_manager:
+        tools_instance.credential_manager = credential_manager
+
+    return tools_instance, tools_cfg
+
+
+async def click(index: int, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Click the element with the given index.
+
+    Args:
+        index: The index of the element to click
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Result message from the tap operation
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    return await tools.tap_by_index(index)
+
+
+async def long_press(index: int, *, tools: "Tools" = None, **kwargs) -> bool:
+    """
+    Long press the element with the given index.
+
+    Args:
+        index: The index of the element to long press
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    x, y = tools._extract_element_coordinates_by_index(index)
+    return await tools.swipe(x, y, x, y, 1000)
+
+
+async def type(
+    text: str, index: int, clear: bool = False, *, tools: "Tools" = None, **kwargs
+) -> str:
+    """
+    Type the given text into the element with the given index.
+
+    Args:
+        text: The text to type
+        index: The index of the element to type into
+        clear: Whether to clear existing text before typing (default: False)
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Result message from the input operation
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    return await tools.input_text(text, index, clear=clear)
+
+
+async def system_button(button: str, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Press a system button (back, home, or enter).
+
+    Args:
+        button: The button name (case insensitive): "back", "home", or "enter"
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Result message from the key press operation
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+
+    # Map button names to keycodes (case insensitive)
+    button_map = {
+        "back": 4,
+        "home": 3,
+        "enter": 66,
+    }
+
+    button_lower = button.lower()
+    if button_lower not in button_map:
+        return (
+            f"Error: Unknown system button '{button}'. Valid options: back, home, enter"
+        )
+
+    keycode = button_map[button_lower]
+    return await tools.press_key(keycode)
+
+
+async def swipe(
+    coordinate: List[int],
+    coordinate2: List[int],
+    duration: float = 1.0,
+    *,
+    tools: "Tools" = None,
+    **kwargs,
+) -> bool:
+    """
+    Swipe from one coordinate to another.
+
+    Args:
+        coordinate: Starting coordinate as [x, y]
+        coordinate2: Ending coordinate as [x, y]
+        duration: Duration of swipe in seconds (default: 1.0)
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+
+    if not isinstance(coordinate, list) or len(coordinate) != 2:
+        raise ValueError(f"coordinate must be a list of 2 integers, got: {coordinate}")
+    if not isinstance(coordinate2, list) or len(coordinate2) != 2:
+        raise ValueError(
+            f"coordinate2 must be a list of 2 integers, got: {coordinate2}"
+        )
+
+    start_x, start_y = coordinate
+    end_x, end_y = coordinate2
+
+    # Convert seconds to milliseconds
+    duration_ms = int(duration * 1000)
+
+    return await tools.swipe(start_x, start_y, end_x, end_y, duration_ms=duration_ms)
+
+
+async def open_app(text: str, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Open an app by its name.
+
+    Args:
+        text: The name of the app to open
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Result message from opening the app
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+
+    # Get LLM from tools instance
+    if tools.app_opener_llm is None:
+        raise RuntimeError(
+            "app_opener_llm not configured. "
+            "provide app_opener_llm when initializing Tools."
+        )
+
+    # Create workflow instance
+    workflow = AppStarter(
+        tools=tools,
+        llm=tools.app_opener_llm,
+        timeout=60,
+        stream=tools.streaming,
+        verbose=False,
+    )
+
+    # Run workflow to open an app
+    result = await workflow.run(app_description=text)
+    await asyncio.sleep(1)
+    return result
+
+
+async def open_url(url: str, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Open a URL on the device. Useful for opening Play Store links which will
+    redirect to the Play Store app for installation.
+
+    Args:
+        url: The URL to open (e.g., "https://play.google.com/store/apps/details?id=com.example.app")
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Result message from opening the URL
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    return await tools.open_url(url)
+
+
+async def press_key(keycode: int, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Press a key by its Android keycode.
+
+    Common keycodes:
+        - 111: Escape (dismiss keyboard)
+        - 4: Back
+        - 3: Home
+        - 66: Enter
+        - 67: Delete/Backspace
+        - 61: Tab
+        - 19: Dpad Up
+        - 20: Dpad Down
+        - 21: Dpad Left
+        - 22: Dpad Right
+
+    Args:
+        keycode: The Android keycode to press
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Result message from the key press operation
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    return await tools.press_key(keycode)
+
+
+def get_email(email_address: str, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Retrieve and parse the latest verification email from a MailSlurp inbox.
+
+    This function waits for an email to arrive (up to 30 seconds), then uses
+    an LLM to intelligently extract either a verification link OR an OTP code,
+    returning a clean actionable response.
+
+    Args:
+        email_address: The MailSlurp inbox email address (provided in task credentials)
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        A structured response with one of these formats:
+        - "VERIFICATION_LINK: <url>" - Use open_url() to open this link
+        - "OTP_CODE: <code>" - Type this code into the verification field
+        - "ERROR: <message>" - Something went wrong
+
+    Example:
+        result = get_email("qai_executor-xyz@mailslurp.biz")
+        # Returns: "VERIFICATION_LINK: https://example.com/verify?token=abc"
+        # Then use: open_url("https://example.com/verify?token=abc")
+        #
+        # Or returns: "OTP_CODE: 123456"
+        # Then use: type("123456", otp_field_index)
+    """
+    import html
+    import json
+
+    try:
+        import time
+
+        from mailSlurp import get_client
+
+        client = get_client()
+
+        # Wait 10 seconds for the email to be sent/delivered before checking
+        logger.info(f"Waiting 10 seconds for email delivery to {email_address}...")
+        time.sleep(10)
+
+        logger.info(f"Checking for email in inbox: {email_address}")
+
+        # Wait for the latest email to arrive (15 second timeout)
+        email = client.wait_for_latest_email(
+            inbox_email=email_address,
+            timeout_ms=15000,
+            unread_only=True,
+        )
+
+        # Extract email content
+        subject = email.get("subject", "No subject")
+        body = email.get("body") or email.get("textExcerpt") or email.get("bodyExcerpt") or ""
+        html_content = email.get("html") or ""
+
+        logger.info(f"Retrieved email with subject: {subject}")
+
+        # Decode HTML entities
+        if body:
+            body = html.unescape(body)
+        if html_content:
+            html_content = html.unescape(html_content)
+
+        # Combine content for LLM analysis
+        email_content = f"Subject: {subject}\n\nBody:\n{body}"
+        if html_content:
+            email_content += f"\n\nHTML Content:\n{html_content}"
+
+        # Use LLM to extract verification info
+        extraction_result = _extract_verification_with_llm(email_content, tools)
+
+        # Validate the result format - must start with expected prefix
+        valid_prefixes = ("VERIFICATION_LINK:", "OTP_CODE:", "ERROR:")
+        if not extraction_result.startswith(valid_prefixes):
+            logger.error(f"Invalid extraction result format: {extraction_result[:100]}...")
+            return f"ERROR: Failed to extract verification info - unexpected format"
+
+        return extraction_result
+
+    except ImportError:
+        return "ERROR: MailSlurp module not available. Please install mailSlurp dependencies."
+    except Exception as e:
+        logger.error(f"Failed to retrieve email: {e}")
+        return f"ERROR: Failed to retrieve email from {email_address}: {str(e)}"
+
+
+def _extract_verification_with_llm(email_content: str, tools: "Tools" = None) -> str:
+    """
+    Use LLM to intelligently extract verification link or OTP from email content.
+
+    Args:
+        email_content: The full email content (subject + body + html)
+        tools: Tools instance to access LLM
+
+    Returns:
+        Structured response: VERIFICATION_LINK, OTP_CODE, or ERROR
+    """
+    import os
+    from enum import Enum
+
+    from pydantic import BaseModel, Field
+
+    class VerificationType(str, Enum):
+        VERIFICATION_LINK = "VERIFICATION_LINK"
+        OTP_CODE = "OTP_CODE"
+        NO_VERIFICATION_FOUND = "NO_VERIFICATION_FOUND"
+
+    class VerificationResult(BaseModel):
+        """Structured result for email verification extraction."""
+
+        verification_type: VerificationType = Field(
+            description="The type of verification found in the email"
+        )
+        value: str = Field(
+            description="The verification link URL or OTP code digits, or reason if not found"
+        )
+
+    extraction_prompt = """Analyze this email and extract the verification method.
+
+EMAIL CONTENT:
+{email_content}
+
+TASK:
+1. Determine if this is a verification/confirmation email
+2. Extract EITHER:
+   - The verification/confirmation LINK (full URL) if present
+   - The OTP/verification CODE (numeric digits) if present
+
+RULES:
+- For links: Extract the COMPLETE URL including all query parameters
+- For OTP: Extract ONLY the numeric code (4-8 digits typically)
+- Prefer verification LINK over OTP if both exist
+- If neither found, set verification_type to NO_VERIFICATION_FOUND and explain why in value"""
+
+    try:
+        logger.info("Starting LLM-based verification extraction...")
+
+        # Try to use the tools' LLM if available
+        if tools is not None and hasattr(tools, "app_opener_llm") and tools.app_opener_llm is not None:
+            logger.info("Using tools.app_opener_llm for extraction")
+            llm = tools.app_opener_llm
+            structured_llm = llm.as_structured_llm(VerificationResult)
+            response = structured_llm.complete(
+                extraction_prompt.format(email_content=email_content[:4000])
+            )
+            result = response.raw
+            logger.info(f"LLM response received, raw result: {result.__class__.__name__}")
+        else:
+            # Fallback: Use Google GenAI directly with structured output
+            logger.info("Using Google GenAI fallback for extraction")
+            try:
+                from llama_index.llms.google_genai import GoogleGenAI
+
+                # Try to get API key from environment, then from gcp_upload config
+                api_key = os.environ.get("GOOGLE_API_KEY")
+                if not api_key:
+                    try:
+                        from gcp_upload.config import config as gcp_config
+
+                        api_key = gcp_config.gemini_api_key
+                    except ImportError:
+                        return "ERROR: GOOGLE_API_KEY not set and gcp_upload config not available"
+
+                llm = GoogleGenAI(model="gemini-2.0-flash", temperature=0.0, api_key=api_key)
+                structured_llm = llm.as_structured_llm(VerificationResult)
+                response = structured_llm.complete(
+                    extraction_prompt.format(email_content=email_content[:4000])
+                )
+                result = response.raw
+                logger.info(f"LLM response received, raw result: {result.__class__.__name__}")
+            except Exception as llm_error:
+                logger.error(f"LLM extraction failed: {llm_error}")
+                return f"ERROR: Could not analyze email - LLM unavailable: {str(llm_error)}"
+
+        # Format the structured response
+        if isinstance(result, VerificationResult):
+            if result.verification_type == VerificationType.NO_VERIFICATION_FOUND:
+                logger.warning(f"No verification found: {result.value}")
+                return f"ERROR: No verification link or OTP code found in email. Reason: {result.value}"
+            # Clean up the extracted value (unescape HTML entities in URLs)
+            value = result.value
+            if result.verification_type == VerificationType.VERIFICATION_LINK:
+                value = value.replace('&amp;', '&')
+            formatted_result = f"{result.verification_type.value}: {value}"
+            logger.info(f"LLM extracted: {formatted_result[:100]}...")
+            return formatted_result
+        else:
+            logger.warning(f"Unexpected result format: {result}")
+            return f"ERROR: Unexpected response format from LLM"
+
+    except Exception as e:
+        logger.error(f"LLM extraction error: {e}")
+        return f"ERROR: Failed to extract verification info: {str(e)}"
+
+
+async def wait(duration: float = 1.0, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Wait for a specified duration in seconds.
+
+    Args:
+        duration: Duration to wait in seconds
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Confirmation message
+    """
+    # Emit WaitEvent for macro recording if context available
+    if tools is not None and hasattr(tools, "_ctx") and tools._ctx is not None:
+        from droidrun.agent.common.events import WaitEvent
+
+        wait_event = WaitEvent(
+            action_type="wait",
+            description=f"Wait for {duration} seconds",
+            duration=duration,
+        )
+        tools._ctx.write_event_to_stream(wait_event)
+
+    await asyncio.sleep(duration)
+    return f"Waited for {duration} seconds"
+
+
+def remember(information: str, *, tools: "Tools" = None, **kwargs) -> str:
+    """
+    Remember important information for later use.
+
+    Args:
+        information: The information to remember
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        Confirmation message
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    return tools.remember(information)
+
+
+async def complete(
+    success: bool, reason: str = "", *, tools: "Tools" = None, **kwargs
+) -> None:
+    """
+    Mark the task as complete.
+
+    Args:
+        success: Whether the task was completed successfully
+        reason: Explanation for success or failure
+        tools: The Tools instance (injected automatically)
+
+    Returns:
+        None
+    """
+    if tools is None:
+        raise ValueError("tools parameter is required")
+    await tools.complete(success, reason)
+
+
+# =============================================================================
+# ATOMIC ACTION SIGNATURES - Single source of truth for both Executor and CodeAct
+# =============================================================================
+
+ATOMIC_ACTION_SIGNATURES = {
+    "click": {
+        "arguments": ["index"],
+        "description": 'Click the point on the screen with specified index. Usage Example: {"action": "click", "index": element_index}',
+        "function": click,
+    },
+    "long_press": {
+        "arguments": ["index"],
+        "description": 'Long press on the position with specified index. Usage Example: {"action": "long_press", "index": element_index}',
+        "function": long_press,
+    },
+    "type": {
+        "arguments": ["text", "index", "clear=False"],
+        "description": 'Type text into an input box or text field. Specify the element with index to focus the input field before typing. By default, text is APPENDED to existing content. Set clear=True to clear the field first (recommended for URL bars, search fields, or when replacing text). Usage Example: {"action": "type", "text": "example.com", "index": element_index, "clear": true}',
+        "function": type,
+    },
+    "system_button": {
+        "arguments": ["button"],
+        "description": 'Press a system button, including back, home, and enter. Usage example: {"action": "system_button", "button": "Home"}',
+        "function": system_button,
+    },
+    "swipe": {
+        "arguments": ["coordinate", "coordinate2", "duration=1.0"],
+        "description": 'Scroll from the position with coordinate to the position with coordinate2. Duration is in seconds (default: 1.0). Please make sure the start and end points of your swipe are within the swipeable area and away from the keyboard (y1 < 1400). Usage Example: {"action": "swipe", "coordinate": [x1, y1], "coordinate2": [x2, y2], "duration": 1.5}',
+        "function": swipe,
+    },
+    "wait": {
+        "arguments": ["duration"],
+        "description": 'Wait for a specified duration in seconds. Useful for waiting for animations, page loads, or other time-based operations. Usage Example: {"action": "wait", "duration": 2.0}',
+        "function": wait,
+    },
+    "press_key": {
+        "arguments": ["keycode"],
+        "description": 'Press a key by its Android keycode. Common keycodes: 111 (Escape/dismiss keyboard), 4 (Back), 3 (Home), 66 (Enter), 67 (Delete/Backspace), 61 (Tab). Usage Example: press_key(111) to dismiss keyboard',
+        "function": press_key,
+    },
+    "get_email": {
+        "arguments": ["email_address"],
+        "description": 'Retrieve and parse verification email from MailSlurp inbox (use email from task credentials). Returns one of: "VERIFICATION_LINK: <url>" - call open_url(url) to complete verification; "OTP_CODE: <digits>" - type this code into the OTP input field in the app using type(code, index); "ERROR: <msg>" - retrieval failed.',
+        "function": get_email,
+    },
+    "open_url": {
+        "arguments": ["url"],
+        "description": 'Open a URL on the device. Useful for opening Play Store links to install apps. Usage Example: open_url("https://play.google.com/store/apps/details?id=com.example.app")',
+        "function": open_url,
+    },
+    # "copy": {
+    #     "arguments": ["text"],
+    #     "description": "Copy the specified text to the clipboard. Provide the text to copy using the 'text' argument. Example: {\"action\": \"copy\", \"text\": \"the text you want to copy\"}\nAlways use copy action to copy text to clipboard."
+    #     "function": copy,
+    # },
+    # "paste": {
+    #     "arguments": ["index", "clear"],
+    #     "description": "Paste clipboard text into a text box. 'index' specifies which text box to focus on and paste into. Set 'clear' to true to clear existing text before pasting. Example: {\"action\": \"paste\", \"index\": 0, \"clear\": true}\nAlways use paste action to paste text from clipboard."
+    #     "function": paste,
+    # },
+}
+
+
+# =============================================================================
+# TOOL FILTERING
+# =============================================================================
+
+
+def filter_atomic_actions(disabled_tools: List[str]) -> Dict[str, Any]:
+    """
+    Filter ATOMIC_ACTION_SIGNATURES by removing disabled tools.
+
+    Args:
+        disabled_tools: List of tool names to exclude. Empty list = all tools enabled.
+
+    Returns:
+        Filtered dict of atomic action signatures.
+    """
+    if not disabled_tools:
+        return ATOMIC_ACTION_SIGNATURES.copy()
+
+    return {
+        k: v for k, v in ATOMIC_ACTION_SIGNATURES.items() if k not in disabled_tools
+    }
+
+
+def filter_custom_tools(
+    custom_tools: Dict[str, Any],
+    disabled_tools: List[str],
+) -> Dict[str, Any]:
+    """
+    Filter custom tools dict by removing disabled tools.
+
+    Args:
+        custom_tools: Dict of custom tool signatures
+        disabled_tools: List of tool names to exclude. Empty list = all tools enabled.
+
+    Returns:
+        Filtered dict of custom tool signatures.
+    """
+    if not custom_tools:
+        return {}
+
+    if not disabled_tools:
+        return custom_tools.copy()
+
+    return {k: v for k, v in custom_tools.items() if k not in disabled_tools}
+
+
+def get_atomic_tool_descriptions() -> str:
+    """
+    Get formatted tool descriptions for CodeAct system prompt.
+
+    Returns:
+        Formatted string of tool descriptions for LLM prompt
+    """
+    descriptions = []
+    for action_name, signature in ATOMIC_ACTION_SIGNATURES.items():
+        args = ", ".join(signature["arguments"])
+        desc = signature["description"]
+        descriptions.append(f"- {action_name}({args}): {desc}")
+
+    return "\n".join(descriptions)
+
+
+def build_custom_tool_descriptions(custom_tools: dict) -> str:
+    """
+    Build formatted tool descriptions from custom_tools dict.
+
+    Args:
+        custom_tools: Dictionary of custom tools in ATOMIC_ACTION_SIGNATURES format
+            {
+                "tool_name": {
+                    "arguments": ["arg1", "arg2"],
+                    "description": "Tool description with usage",
+                    "function": callable
+                }
+            }
+
+    Returns:
+        Formatted string of custom tool descriptions for LLM prompt
+    """
+    if not custom_tools:
+        return ""
+
+    descriptions = []
+    for action_name, signature in custom_tools.items():
+        args = ", ".join(signature.get("arguments", []))
+        desc = signature.get("description", f"Custom action: {action_name}")
+        descriptions.append(f"- {action_name}({args}): {desc}")
+
+    return "\n".join(descriptions)
+
+
+# =============================================================================
+# CREDENTIAL TOOLS
+# =============================================================================
+
+
+async def type_secret(
+    secret_id: str, index: int, *, tools: "Tools" = None, **kwargs
+) -> str:
+    """
+    Type a secret credential into an input field without exposing the value.
+
+    Args:
+        secret_id: Secret ID from credentials store
+        index: Input field element index
+        tools: Tools instance (injected automatically, must have credential_manager)
+
+    Returns:
+        Sanitized result message (NEVER includes actual secret value)
+    """
+    import logging
+
+    logger = logging.getLogger("droidrun")
+
+    if tools is None:
+        raise ValueError("tools parameter is required")
+
+    if not hasattr(tools, "credential_manager") or tools.credential_manager is None:
+        return "Error: Credential manager not initialized. Enable credentials in config.yaml"
+
+    try:
+        # Get secret value from credential manager
+        secret_value = await tools.credential_manager.resolve_key(secret_id)
+
+        # Type using existing input_text method
+        await tools.input_text(secret_value, index)
+
+        # Return sanitized message (NEVER log/return actual secret)
+        return f"Successfully typed secret '{secret_id}' into element {index}"
+
+    except Exception as e:
+        # Log error without exposing secret
+        logger.error(f"Failed to type secret '{secret_id}': {e}")
+        available = (
+            await tools.credential_manager.get_keys()
+            if tools.credential_manager
+            else []
+        )
+        return f"Error: Secret '{secret_id}' not found. Available: {available}"
+
+
+async def build_credential_tools(credential_manager) -> dict:
+    """
+    Build credential-related custom tools if credential manager is available.
+
+    Args:
+        credential_manager: CredentialManager instance or None
+
+    Returns:
+        Dictionary of credential tools (empty if no credentials available)
+    """
+    import logging
+
+    logger = logging.getLogger("droidrun")
+
+    if credential_manager is None:
+        return {}
+
+    # Check if there are any enabled secrets
+    available_secrets = await credential_manager.get_keys()
+    if not available_secrets:
+        logger.debug("No enabled secrets found, credential tools disabled")
+        return {}
+
+    logger.debug(f"Building credential tools with {len(available_secrets)} secrets")
+
+    return {
+        "type_secret": {
+            "arguments": ["secret_id", "index"],
+            "description": 'Type a secret credential from the credential store into an input field. The agent never sees the actual secret value, only the secret_id. Usage: {"action": "type_secret", "secret_id": "MY_PASSWORD", "index": 5}',
+            "function": type_secret,
+        },
+    }
+
+
+async def build_custom_tools(credential_manager=None) -> dict:
+    """
+    Build all custom tools (credentials + utility tools).
+
+    This is the master function that assembles all custom tools:
+    - Credential tools (type_secret) if credential manager available
+    - Utility tools (open_app) always included
+
+    Args:
+        credential_manager: CredentialManager instance or None
+
+    Returns:
+        Dictionary of all custom tools
+    """
+    import logging
+
+    logger = logging.getLogger("droidrun")
+
+    custom_tools = {}
+
+    # 1. Add credential tools (if available)
+    credential_tools = await build_credential_tools(credential_manager)
+    custom_tools.update(credential_tools)
+
+    if credential_tools:
+        logger.debug(
+            f"Built {len(credential_tools)} credential tools: {list(credential_tools.keys())}"
+        )
+
+    # 2. Add open_app as custom tool (always available)
+    custom_tools["open_app"] = {
+        "arguments": ["text"],
+        "description": 'Open an app by name or description. Usage: {"action": "open_app", "text": "Gmail"}',
+        "function": open_app,
+    }
+
+    # 3. Future: Add other custom tools here
+    # custom_tools["some_other_tool"] = {...}
+
+    return custom_tools
+
+
+async def test_open_app(mock_tools, text: str) -> str:
+    return await open_app(mock_tools, text)
+
+
+async def _test_main():
+    import asyncio
+    from typing import List
+
+    from llama_index.llms.google_genai import GoogleGenAI
+
+    from droidrun.tools.adb import AdbTools
+
+    llm = GoogleGenAI(model="gemini-2.5-pro", temperature=0.0)
+    mock_tools = AdbTools(app_opener_llm=llm, text_manipulator_llm=llm)
+    await mock_tools.get_state()
+    print("\n=== Testing long_press ===")
+    result = long_press(tools=mock_tools, index=5)
+    print(f"Result: {result}")
+    input("Press Enter to continue...")
+    print("\n=== Testing type ===")
+    result = type(tools=mock_tools, text="Hello World", index=-1)
+    print(f"Result: {result}")
+    input("Press Enter to continue...")
+
+    print("\n=== Testing system_button ===")
+    result = system_button(tools=mock_tools, button="back")
+    print(f"Result: {result}")
+    input("Press Enter to continue...")
+
+    print("\n=== Testing swipe ===")
+    result = swipe(tools=mock_tools, coordinate=[500, 0], coordinate2=[500, 1000])
+    print(f"Result: {result}")
+    input("Press Enter to continue...")
+
+    print("\n=== Testing open_app ===")
+    try:
+        result = await test_open_app(mock_tools, "Calculator")
+        print(f"Result: {result}")
+        input("Press Enter to continue...")
+    except Exception as e:
+        print(f"Expected error (no LLM): {e}")
+        input("Press Enter to continue...")
+
+    print("\n=== All tests completed ===")
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(_test_main())

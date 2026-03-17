@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphEditor Collaboration Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .section {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        input, button, select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>GraphEditor Collaboration Test Client</h1>
+    
+    <div class="container">
+        <div class="section">
+            <h3>Connection & Room Control</h3>
+            <div class="controls">
+                <input type="text" id="roomId" placeholder="Room ID" value="test-room-1">
+                <button onclick="joinRoom()">Join Room</button>
+                <button onclick="leaveRoom()">Leave Room</button>
+                <button onclick="connect()">Connect</button>
+            </div>
+            <div id="status" class="status">Disconnected</div>
+        </div>
+
+        <div class="section">
+            <h3>Graph Editor Events</h3>
+            <div class="controls">
+                <select id="graphEventType">
+                    <option value="node_create">Node Create</option>
+                    <option value="node_delete">Node Delete</option>
+                    <option value="node_description_change">Node Description Change</option>
+                    <option value="node_image_change">Node Image Change</option>
+                    <option value="node_move">Node Move</option>
+                    <option value="edge_create">Edge Create</option>
+                    <option value="edge_delete">Edge Delete</option>
+                    <option value="edge_description_change">Edge Description Change</option>
+                    <option value="edge_anchor_change">Edge Anchor Change</option>
+                    <option value="feature_create">Feature Create</option>
+                    <option value="feature_edit">Feature Edit</option>
+                    <option value="feature_delete">Feature Delete</option>
+                    <option value="flow_create">Flow Create</option>
+                    <option value="flow_delete">Flow Delete</option>
+                    <option value="comment_add">Comment Add</option>
+                    <option value="comment_edit">Comment Edit</option>
+                    <option value="comment_delete">Comment Delete</option>
+                    <option value="comment_move">Comment Move</option>
+                </select>
+                <button onclick="sendGraphEvent()">Send Graph Event</button>
+            </div>
+            <div class="controls">
+                <input type="text" id="graphEventData" placeholder='Graph Event Data (JSON)' value='{"id": "node1", "x": 100, "y": 100, "title": "Sample Node"}' style="flex: 1;">
+                <button onclick="clearLog()">Clear Log</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Event Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let connected = false;
+        let currentRoom = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] <strong>${type.toUpperCase()}:</strong> ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'status error' : 'status';
+        }
+
+        function connect() {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // Auto-detect server URL - works for both local and external access
+            const serverUrl = `${window.location.protocol}//${window.location.host}`;
+            socket = io(serverUrl);
+
+            socket.on('connect', () => {
+                connected = true;
+                log(`Connected with session ID: ${socket.id}`, 'success');
+                updateStatus(`Connected (${socket.id})`);
+            });
+
+            socket.on('disconnect', () => {
+                connected = false;
+                currentRoom = null;
+                log('Disconnected from server', 'info');
+                updateStatus('Disconnected');
+            });
+
+            socket.on('room_joined', (data) => {
+                currentRoom = data.room_id;
+                log(`Successfully joined room: ${data.room_id}`, 'success');
+                updateStatus(`Connected - Room: ${currentRoom}`);
+            });
+
+            socket.on('room_left', (data) => {
+                log(`Left room: ${data.room_id}`, 'info');
+                currentRoom = null;
+                updateStatus(`Connected (${socket.id})`);
+            });
+
+            socket.on('user_joined', (data) => {
+                log(`User joined room: ${data.session_id}`, 'info');
+            });
+
+            socket.on('user_left', (data) => {
+                log(`User left room: ${data.session_id}`, 'info');
+            });
+
+            socket.on('collaboration_event', (data) => {
+                log(`Graph event received: ${data.data.type}`, 'success');
+            });
+
+            socket.on('join_room_error', (data) => {
+                log(`Join room error: ${data.message}`, 'error');
+            });
+
+            socket.on('leave_room_error', (data) => {
+                log(`Leave room error: ${data.message}`, 'error');
+            });
+
+            socket.on('error', (data) => {
+                log(`Socket error: ${JSON.stringify(data)}`, 'error');
+            });
+        }
+
+        function joinRoom() {
+            if (!connected) {
+                log('Not connected to server', 'error');
+                return;
+            }
+
+            const roomId = document.getElementById('roomId').value;
+            if (!roomId) {
+                log('Please enter a room ID', 'error');
+                return;
+            }
+
+            socket.emit('join_room', {
+                room_id: roomId,
+                user_data: {
+                    name: `User_${socket.id.substring(0, 8)}`
+                }
+            });
+        }
+
+        function leaveRoom() {
+            if (!connected) {
+                log('Not connected to server', 'error');
+                return;
+            }
+
+            socket.emit('leave_room', {});
+        }
+
+        function sendGraphEvent() {
+            if (!connected || !currentRoom) {
+                log('Not connected or not in a room', 'error');
+                return;
+            }
+
+            const eventType = document.getElementById('graphEventType').value;
+            const eventDataStr = document.getElementById('graphEventData').value;
+
+            try {
+                const eventData = JSON.parse(eventDataStr);
+                
+                // Send the specific graph editor event
+                socket.emit(eventType, eventData);
+                log(`Sent ${eventType} event`, 'success');
+            } catch (e) {
+                log(`Invalid JSON in graph event data: ${e.message}`, 'error');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html>

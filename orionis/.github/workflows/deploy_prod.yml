@@ -1,0 +1,107 @@
+name: Deploy to Google Cloud Functions Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_PRODUCTION }}
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID_PRODUCTION }}
+
+      - name: Run Deployment
+        env:
+          ENVIRONMENT: ${{ secrets.ENVIRONMENT_PRODUCTION }}
+          GEMINI_API_KEY_PRODUCTION: ${{ secrets.GEMINI_API_KEY_PRODUCTION }}
+          GEMINI_MODEL_NAME: gemini-1.5-flash
+          CLERK_JWKS_URL_PRODUCTION: ${{ secrets.CLERK_JWKS_URL_PRODUCTION }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY_PRODUCTION }}
+          CLERK_SECRET_KEY_PRODUCTION: ${{ secrets.CLERK_SECRET_KEY_PRODUCTION }}
+          HMAC_SECRET_KEY_PRODUCTION: ${{ secrets.HMAC_SECRET_KEY_PRODUCTION }}
+          NOTIFICATION_WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
+          TEST_RUN_UPDATE_WEBHOOK_URL: ${{ secrets.TEST_RUN_UPDATE_WEBHOOK_URL }}
+          CUSTOMER_COMMENTS_WEBHOOK_URL: ${{ secrets.CUSTOMER_COMMENTS_WEBHOOK_URL }}
+          GCP_PROJECT_ID_PRODUCTION: ${{ secrets.GCP_PROJECT_ID_PRODUCTION }}
+          SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
+          TCS_FROM_FLOW_TIMEOUT_MINS: ${{ secrets.TCS_FROM_FLOW_TIMEOUT_MINS }}
+          ENABLE_SHARDING_FOR_KG_FLOW_ANALYZER: ${{secrets.ENABLE_SHARDING_FOR_KG_FLOW_ANALYZER}}
+          ENABLE_NEW_VIDEO_TO_FLOW: ${{secrets.ENABLE_NEW_VIDEO_TO_FLOW}}
+          JIRA_ENCRYPTION_KEY: ${{ secrets.JIRA_ENCRYPTION_KEY }}
+          MIXPANEL_TOKEN_PROD: ${{ secrets.MIXPANEL_TOKEN_PROD}}
+          STRIPE_SECRET_KEY_PRODUCTION: ${{ secrets.STRIPE_SECRET_KEY_PRODUCTION }}
+          STRIPE_WEBHOOK_SECRET_PRODUCTION: ${{ secrets.STRIPE_WEBHOOK_SECRET_PRODUCTION }}
+
+        run: |
+          chmod +x src/deploy_production.sh
+          src/deploy_production.sh
+
+      - name: Create Tag Automatically
+        if: success()
+        run: |
+          COMMIT_MSG="$(git log -1 --pretty=%B)"
+
+          echo "🔍 Commit message:"
+          echo "$COMMIT_MSG"
+
+          SOURCE_BRANCH=$(echo "$COMMIT_MSG" | sed -n 's/.* from \([^ ]*\).*/\1/p')
+
+          if [ -z "$SOURCE_BRANCH" ]; then
+            SOURCE_BRANCH="${{ github.ref_name }}"
+          fi
+
+          echo "🔍 Detected source branch: $SOURCE_BRANCH"
+
+          VERSION="${SOURCE_BRANCH##*/}"
+
+          echo "📦 Extracted version: $VERSION"
+
+          if [[ "$VERSION" == "main" || "$VERSION" == "develop" ]]; then
+            echo "⛔ Skipping tag because version resolves to '$VERSION'."
+            exit 0
+          fi
+
+          echo "🏷 Creating tag: $VERSION"
+
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+          git tag -a "$VERSION" -m "Release $VERSION [skip ci]"
+          git push origin "$VERSION"
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && ':rocket: *Production Deployment Successful!* :white_check_mark:' || ':warning: *Production Deployment Failed!* :x:' }}
+              \n*Environment:* `Production`
+              \n*Service:* `Orionis`
+              \n*Branch:* `${{ github.ref_name }}`
+              \n*Commit:* `${{ github.sha }}`
+              \n*Author:* `${{ github.actor }}`
+              \n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|View Commit>"
+            }

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "QAI Web Recorder",
+  "version": "2.0.1",
+  "description": "Capture user interactions on any website for QAI test case generation",
+  "permissions": ["activeTab", "tabs", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": true,
+      "match_about_blank": true
+    },
+    {
+      "matches": [
+        "https://app.qaitech.ai/*",
+        "https://nebula-236141506463.europe-west3.run.app/*"
+      ],
+      "js": ["graph-editor-bridge.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+flask
+flask-cors
+flask-socketio
+python-dotenv
+nanoid
+google-cloud-storage
+google-cloud-datastore
+pydantic

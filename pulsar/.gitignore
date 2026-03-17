@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*/venv/
+*/env/
+.env
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# APK files (optional - remove if you want to track them)
+uploads/apk/*.apk
+
+# Uploads
+browser-droid/uploads/*
+
+# GCP credentials
+browser-droid/gcp-service-account.json

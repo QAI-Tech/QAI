@@ -1,0 +1,4 @@
+You will see two screens, on the left, there will be an emulator, On the right, there will be a terminal. You will be given instructions regarding closing unnecessary pop ups on the emulator.
+
+1 - If you see a keyboard open where there are characters a to z, on the mobile screen then on the bottom left corner of the mobile screen, you will see a down arrow key(coordinate at (125, 720)), press it. it will close the keyboard.
+    Note that, an input field is not a keyboard.

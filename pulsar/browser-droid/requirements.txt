@@ -1,0 +1,11 @@
+flask
+flask-cors
+flask-socketio
+websockets
+opencv-python
+numpy
+google-generativeai
+python-dotenv
+Pillow
+google-cloud-storage
+nanoid

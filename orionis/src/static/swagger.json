@@ -1,0 +1,322 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "QAI Swagger",
+    "version": "1.0.0"
+  },
+  "host": "127.0.0.1:5000",
+  "basePath": "/",
+  "schemes": [
+    "http"
+  ],
+  "parameters": {
+    "AuthorizationHeader": {
+      "name": "Authorization",
+      "in": "header",
+      "description": "Hardcoded Authorization header. Value must be: debug_token:12345",
+      "required": true,
+      "type": "string",
+      "default": "debug_token:12345"
+    }
+  },
+
+  "paths": {
+    "/proxy/get_products": {
+      "post": {
+        "summary": "Get Products",
+        "description": "Retrieves products based on provided organisation details.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Product request parameters",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GetAllProductsParams"
+            }
+          },
+          {
+            "$ref": "#/parameters/AuthorizationHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with products",
+            "schema": {
+              "$ref": "#/definitions/GetAllProductsResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g. invalid JSON or missing parameters)"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/proxy/get_test_cases_for_product": {
+      "get": {
+        "summary": "Get All Test Cases with Product ID",
+        "description": "Retrieves all test cases associated with a given product ID.",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "product_id",
+            "description": "Product ID to filter test cases",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "$ref": "#/parameters/AuthorizationHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test cases retrieved successfully"
+          },
+          "400": {
+            "description": "Bad request (missing product_id)"
+          },
+          "404": {
+            "description": "No test cases found for the given product ID"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/proxy/create_test_run": {
+      "post": {
+        "summary": "Create Test Run",
+        "description": "Creates a new test run for a specified product.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "JSON body containing the product_id",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "product_id"
+              ]
+            }
+          },
+          {
+            "$ref": "#/parameters/AuthorizationHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test run created successfully"
+          },
+          "400": {
+            "description": "Bad request (missing product_id)"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/proxy/signin": {
+      "get": {
+        "summary": "Sign In",
+        "description": "Signs in a user using the provided Bearer token and returns user details along with a session token.",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "description": "Bearer token for authentication",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "$ref": "#/parameters/AuthorizationHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User signed in successfully"
+          },
+          "401": {
+            "description": "Unauthorized (missing or invalid token)"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/proxy/add_product": {
+      "post": {
+        "summary": "Add Product",
+        "description": "Adds a new product using the provided API request entity.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "API request entity containing product data",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ApiRequestEntity"
+            }
+          },
+          {
+            "$ref": "#/parameters/AuthorizationHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product added successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/proxy/update_test_case": {
+      "post": {
+        "summary": "Update Test Case",
+        "description": "Updates an existing test case with new data.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "API request entity containing the updated test case data",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ApiRequestEntity"
+            }
+          },
+          {
+            "$ref": "#/parameters/AuthorizationHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test case updated successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "GetAllProductsParams": {
+      "type": "object",
+      "properties": {
+        "organisation_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "organisation_id"
+      ]
+    },
+    "GetAllProductsResponse": {
+      "type": "object",
+      "properties": {
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "required": [
+        "products"
+      ]
+    },
+    "ExportTestCasesToExcelRequest": {
+      "type": "object",
+      "properties": {
+        "testcase_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "testcase_ids"
+      ]
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "email"
+      ]
+    },
+    "ApiRequestEntity": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object"
+        },
+        "method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "method"
+      ]
+    }
+  }
+}

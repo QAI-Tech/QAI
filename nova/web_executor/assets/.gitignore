@@ -1,0 +1,8 @@
+# Ignore all video recordings
+videos/
+*.mp4
+*.webm
+*.avi
+
+# But keep the directory structure
+!.gitignore

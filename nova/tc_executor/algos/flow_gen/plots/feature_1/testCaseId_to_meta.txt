@@ -1,0 +1,186 @@
+0:
+User is on the Onboarding Form screen.,User has not entered any information into the name or date of birth fields.
+
+Tap the 'Continue' button.
+An error message is displayed, indicating that the name field is required.,An error message is displayed, indicating that the date of birth field is required.
+
+
+
+1:
+User is on the 'Set Spoon Status' screen.,User has not selected a spoon status.
+
+Tap 'Continue'.
+An error message is displayed, indicating that the user must choose a spoon status.,The user is not allowed to proceed to the next screen.
+
+
+
+2:
+User is on the 'Turn On Notifications' screen.
+
+Tap 'Turn on notifications'.
+The application requests notification permissions from the operating system.,If the user grants permission, notifications are enabled for the application.
+
+
+
+3:
+User is on the 'Community Guidelines' screen.
+
+Scroll through the community guidelines.
+The user can read all of the community guidelines.
+
+
+
+4:
+User is on the 'Turn On Notifications' screen.
+
+Tap 'No thanks'.
+Notifications are disabled for the application.,The user proceeds to the next screen.
+
+
+
+5:
+User is on the About You screen.
+
+Select one or more options about them.
+The selected option is highlighted.,The checkbox next to the option is checked.
+
+Tap 'Continue'
+The next screen in the onboarding process is displayed.
+
+
+
+6:
+User is on the Username Creation screen.,User enters a username that is available.
+
+Tap the 'Validate' button.
+A message is displayed, indicating that the username is available.
+
+
+
+7:
+User is on the Under 18 Restriction screen.,The user is under 18.
+
+Check the 'Yes, let me know when I can join Spoony' checkbox.
+The checkbox is checked.
+
+
+
+8:
+User is on the Invite Code screen.,User entered a username that is not in the system.
+
+Tap the 'Confirm' button.
+An error message is displayed, indicating that there is no user with that username.
+
+
+
+9:
+User is on the About You screen.,User has not selected any options.
+
+Tap 'Continue'
+An error message is displayed, indicating that the user must select at least one option.
+
+
+
+10:
+User is on the Invite Code screen.
+
+Tap the 'Skip' button.
+The application skips the invite code screen and proceeds to the next step.
+
+
+
+11:
+User is on the Username Creation screen.,User enters a username that is less than two characters long.
+
+Tap the 'Validate' button.
+An error message is displayed, indicating that the username must be at least two characters long.
+
+
+
+12:
+User is on the 'Community Guidelines' screen.,User has read the community guidelines.
+
+Check the checkbox to agree to the community guidelines.
+The checkbox is checked.,The user is now able to tap the 'Let's go' button.
+
+Tap the 'Let's go' button.
+The application proceeds to the next screen (dashboard screen).
+
+
+
+13:
+User is on the Username Creation screen.,User enters a username that is unavailable.
+
+Tap the 'Validate' button.
+A message is displayed, indicating that the username is unavailable.
+
+
+
+14:
+User is on the Under 18 Restriction screen.,The user is under 18.
+
+The screen is displayed.
+The screen informs the user that they must be 18 or older to join.
+
+
+
+15:
+User is on the Onboarding Form screen.,User has entered their first name in the name field.,User has selected their pronouns.,User has entered their date of birth in the date of birth field.
+
+Tap the 'Continue' button.
+The next screen in the onboarding process (Username Creation screen) is displayed.
+
+
+
+16:
+User is on the Onboarding Form screen.,User taps on the Pronouns field.
+
+Search for a pronoun.
+A list of matching pronouns is displayed.
+
+Select a pronoun from the list.
+The selected pronoun is added to the list of selected pronouns.,The selected pronoun appears in the pronoun field on the Onboarding Form screen.,User can choose up to 4 pronouns.
+
+
+
+17:
+User is on the Invite Code screen.
+
+Enter a valid username in the 'Their username (optional)' field.
+The username is displayed in the input field.
+
+Tap the 'Confirm' button.
+The application validates the entered username.
+
+
+
+18:
+User is on the 'Set Spoon Status' screen.
+
+Select a spoon status from the given options.
+The selected spoon status is highlighted.,The selected spoon status is saved.
+
+Tap 'Continue'.
+The application saves the selected spoon status.,The user proceeds to the next screen.
+
+
+
+19:
+User is on the 'Community Guidelines' screen.,User has not agreed to the community guidelines.
+
+Tap the 'Let's go' button.
+The application shows an error message indicating that the user must agree to the community guidelines to continue.,The user is not allowed to proceed to the next screen (dashboard screen).
+
+
+
+20:
+User is on the 'Add Profile Picture' screen.
+
+Tap 'Choose an image'.
+The application opens the device's image selection interface.,The user can select an image from their device.
+
+Select an image from the device's gallery.
+The selected image is set as the user's profile picture.,The application proceeds to the next screen.
+
+
+
