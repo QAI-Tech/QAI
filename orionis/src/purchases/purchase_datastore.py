@@ -1,6 +1,5 @@
 from common.google_cloud_wrappers import GCPDatastoreWrapper
 from purchases.purchase_models import Purchase
-from google.cloud import datastore
 from datetime import datetime, timezone
 from utils.util import orionis_log
 from typing import List
@@ -26,7 +25,7 @@ class PurchaseDatastore:
         is_auto_reload: bool,
     ) -> Purchase:
         """Add a purchase record."""
-        entity = datastore.Entity(key=self.db.key(self.ENTITY_KIND_PURCHASE))
+        entity = self.db.entity(key=self.db.key(self.ENTITY_KIND_PURCHASE))
 
         created_at = datetime.now(timezone.utc)
 

@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import List
 
 from common.google_cloud_wrappers import GCPDatastoreWrapper
-from google.cloud import datastore
 from test_case_planning.test_case_planning_models import (
     RequestSmokeTestPlanParams,
     RequestMaintainerAgentParams,
@@ -45,7 +44,7 @@ class TestCasePlanningRequestDatastore:
     def create_planning_request_id(self) -> str:
         try:
             key = self.db.key(self.ENTITY_KIND_PLANNING_REQUEST)
-            entity = datastore.Entity(key=key)
+            entity = self.db.entity(key=key)
             entity.update({self.FIELD_CREATED_AT: datetime.now(timezone.utc)})
             self.db.put(entity)
 
