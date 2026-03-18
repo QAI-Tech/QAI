@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from gateway.gateway_models import ApiRequestEntity, ApiResponseEntity
 from products.product_datastore import ProductDatastore
 from test_case_under_execution.test_case_under_exec_datastore import (
@@ -31,8 +32,6 @@ from test_case_under_execution.test_case_under_exec_models import TestCaseStep
 from services.notify_service.notify import NotificationService
 from uuid import uuid4
 from typing import List, TypeVar
-from google.cloud.storage import Blob
-import google.cloud.storage as storage
 from constants import Constants
 from config import Config, config
 from products.product_service import ProductService
@@ -291,17 +290,27 @@ class TestCaseUnderExecutionService:
                 status_code=ApiResponseEntity.HTTP_STATUS_INTERNAL_SERVER_ERROR,
             )
 
-    def _get_sorted_log_files(self, bucket_name: str, base_path: str) -> List[Blob]:
+    def _read_blob_as_text(self, blob_uri: str) -> str:
+        local_file = self.storage_client.download_file_locally(
+            blob_uri,
+            use_constructed_bucket_name=False,
+        )
+        try:
+            with open(local_file, "r", encoding="utf-8") as file_obj:
+                return file_obj.read()
+        finally:
+            if os.path.exists(local_file):
+                os.remove(local_file)
+
+    def _get_sorted_log_files(self, bucket_name: str, base_path: str) -> List[str]:
         """Get sorted list of log.json files from the bucket."""
-        bucket = storage.Client().bucket(bucket_name)
-        blobs = bucket.list_blobs(prefix=base_path)
+        blobs = self.storage_client.list_blobs(
+            bucket_name=bucket_name,
+            prefix=base_path,
+            use_constructed_bucket_name=False,
+        )
         return sorted(
-            [
-                blob
-                for blob in blobs
-                if isinstance(blob, Blob) and blob.name.endswith("log.json")
-            ],
-            key=lambda x: x.name,
+            [blob_uri for blob_uri in blobs if blob_uri.endswith("log.json")]
         )
 
     def _construct_nova_media_url(self, media_path: str) -> str:
@@ -309,17 +318,15 @@ class TestCaseUnderExecutionService:
         return f"{base_url}/{media_path.lstrip('/')}"
 
     def _process_execution_data(
-        self, sorted_blobs: List[Blob], file_path: str
+        self, sorted_blobs: List[str], file_path: str
     ) -> tuple[list, list]:
         """Process execution data from log files and create test case steps."""
         test_case_steps: List[TestCaseStep] = []
         preconditions: List[str] = []
-        bucket = storage.Client().bucket(
-            f"nova_assets{'-prod' if config.environment == Config.PRODUCTION else ''}"
-        )
 
-        for blob in sorted_blobs:
-            blob_content = bucket.blob(blob.name).download_as_string()
+        for blob_uri in sorted_blobs:
+            blob_content = self._read_blob_as_text(blob_uri)
+            _, blob_name = self.storage_client.parse_uri(blob_uri)
             try:
                 execution_data = (
                     self.request_validator.validate_update_nova_execution_data_params(
@@ -337,16 +344,16 @@ class TestCaseUnderExecutionService:
                     test_case_steps.append(test_case_step)
                     preconditions.extend(execution_data.test_case.preconditions or [])
 
-                if blob.name == file_path:
+                if blob_name == file_path:
                     break
             except KeyError as e:
-                orionis_log(f"Missing key in log.json file {blob.name}: {str(e)}")
-                raise ValueError(f"Missing key in {blob.name}: {str(e)}")
+                orionis_log(f"Missing key in log.json file {blob_name}: {str(e)}")
+                raise ValueError(f"Missing key in {blob_name}: {str(e)}")
             except Exception as e:
                 orionis_log(
-                    f"Unexpected error parsing log.json file {blob.name}: {str(e)}", e
+                    f"Unexpected error parsing log.json file {blob_name}: {str(e)}", e
                 )
-                raise ValueError(f"Unexpected error in {blob.name}: {str(e)}")
+                raise ValueError(f"Unexpected error in {blob_name}: {str(e)}")
 
         return test_case_steps, preconditions
 
@@ -481,8 +488,8 @@ class TestCaseUnderExecutionService:
                     status_code=ApiResponseEntity.HTTP_STATUS_OK,
                 )
             orionis_log(f"File uploaded: gs://{bucket_name}/{file_path}")
-            bucket = storage.Client().bucket(bucket_name)
-            log_txt = bucket.blob(file_path).download_as_text()
+            file_uri = f"gs://{bucket_name}/{file_path}"
+            log_txt = self._read_blob_as_text(file_uri)
             log_json = json.loads(log_txt)
             update_nova_execution_data_params = (
                 self.request_validator.validate_update_nova_execution_data_params(

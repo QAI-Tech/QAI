@@ -169,7 +169,7 @@ class TestRunDatastore:
                     "No executable URL provided and no live URL found in Product entity"
                 )
 
-            test_build_entity = datastore.Entity(
+            test_build_entity = self.db.entity(
                 key=self.db.key(TestRunDatastore.ENTITY_KIND_TEST_BUILD)
             )
 
@@ -206,7 +206,7 @@ class TestRunDatastore:
                     else:
                         test_run_name = test_run.test_run_name
 
-                test_run_entity = datastore.Entity(
+                test_run_entity = self.db.entity(
                     key=self.db.key(TestRunDatastore.ENTITY_KIND_TEST_RUN)
                 )
 
@@ -284,7 +284,7 @@ class TestRunDatastore:
     ) -> Optional[datastore.Entity]:
         """Helper function to create a test case under execution entity."""
         try:
-            test_case_under_execution_entity = datastore.Entity(
+            test_case_under_execution_entity = self.db.entity(
                 key=self.db.key(
                     TestCaseUnderExecutionDatastore.ENTITY_KIND_TEST_CASE_UNDER_EXECUTION
                 )
@@ -744,7 +744,7 @@ class TestRunDatastore:
             precondition = flow.get("precondition", "")
             flow_description = flow.get("description") or ""
 
-            test_case_under_execution_entity = datastore.Entity(
+            test_case_under_execution_entity = self.db.entity(
                 key=self.db.key(
                     TestCaseUnderExecutionDatastore.ENTITY_KIND_TEST_CASE_UNDER_EXECUTION
                 )
