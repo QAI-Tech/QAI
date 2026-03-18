@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -12,10 +13,20 @@ DEFAULT_HOST = "0.0.0.0"
 ROOM_CLEANUP_DELAY = 60  # 1 minute in seconds
 MAX_USERS_PER_ROOM = 100  # Maximum users per collaboration room
 
+
+def _get_qai_root() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "orionis").exists() and (parent / "pulsar").exists():
+            return parent
+    return current.parents[3]
+
 # Directory paths
 LOGS_DIR = "logs"
 TEMP_DIR = "temp"
 PERSISTENCE_DIR = "persistence"
+SHARED_STATE_ROOT = _get_qai_root() / ".qai"
+STORAGE_DIR = os.getenv("STORAGE_LOCAL_ROOT", str(SHARED_STATE_ROOT / "storage"))
 
 # Persistence configuration
 AUTO_SAVE_INTERVAL = 30  # seconds
@@ -42,3 +53,4 @@ def ensure_directories():
     os.makedirs(LOGS_DIR, exist_ok=True)
     os.makedirs(TEMP_DIR, exist_ok=True)
     os.makedirs(PERSISTENCE_DIR, exist_ok=True)
+    os.makedirs(STORAGE_DIR, exist_ok=True)

@@ -24,6 +24,7 @@ import ProductLoadingScreen from "@/components/global/ProductLoadingScreen";
 import { RootState, AppDispatch } from "@/app/store/store";
 import { fetchTestRunsForProduct } from "@/app/store/testRunSlice";
 import { fetchCredentials } from "@/app/store/credentialsSlice";
+import { fetchFeatures } from "@/app/store/featuresSlice";
 import { useGraphFlows } from "@/app/context/graph-flows-context";
 import {
   categorizeTestRunSchema,
@@ -2035,6 +2036,7 @@ export default function TestRunsV2() {
     if (productSwitcher.product_id) {
       dispatch(fetchTestRunsForProduct(productSwitcher.product_id));
       dispatch(fetchCredentials(productSwitcher.product_id));
+      dispatch(fetchFeatures(productSwitcher.product_id));
     }
   }, [dispatch, productSwitcher.product_id]);
 
@@ -2360,21 +2362,40 @@ export default function TestRunsV2() {
   }, [viewMode, isQaiUser]);
 
   const tcueFeatures = useMemo(() => {
+    const featureNameById = new Map<string, string>();
+
+    features.forEach((feature) => {
+      if (feature?.id) {
+        featureNameById.set(feature.id, feature.name);
+      }
+    });
+
+    graphFeatures.forEach((feature) => {
+      if (feature?.id && !featureNameById.has(feature.id)) {
+        featureNameById.set(feature.id, feature.name);
+      }
+    });
+
     const ids = new Set<string>();
     testRunUnderExecution.forEach((tc: TestCaseUnderExecutionSchema) => {
       if (tc.feature_id) ids.add(tc.feature_id);
     });
+
     return Array.from(ids)
       .map((id) => ({
         id,
-        name: features.find((f) => f.id === id)?.name || "Unknown Feature",
+        name: featureNameById.get(id) || "Unknown Feature",
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [testRunUnderExecution, features]);
+  }, [testRunUnderExecution, features, graphFeatures]);
 
   const mapBackendFeatureIdToGraphFeatureId = useCallback(
     (backendFeatureId: string | null): string | null => {
       if (!backendFeatureId || backendFeatureId === "all") return null;
+
+      if (graphFeatures.some((gf) => gf.id === backendFeatureId)) {
+        return backendFeatureId;
+      }
 
       const backendFeature = features.find((f) => f.id === backendFeatureId);
       if (!backendFeature) return null;

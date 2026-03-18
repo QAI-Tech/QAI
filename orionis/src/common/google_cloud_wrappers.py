@@ -16,22 +16,29 @@ from common.local_file_storage import LocalFileStorageWrapper
 from common.sqlite_datastore import SQLiteDatastoreClient
 
 
-def _get_repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+def _get_qai_root() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "orionis").exists() and (parent / "pulsar").exists():
+            return parent
+    return current.parents[2]
+
+
+def _get_shared_state_root() -> Path:
+    return _get_qai_root() / ".qai"
 
 
 class GCPDatastoreWrapper:
     def __init__(self):
-        backend_mode = os.getenv("ORIONIS_BACKEND", "").lower()
-        default_datastore_backend = "sqlite" if backend_mode == "local" else "gcp"
-        datastore_backend = os.getenv(
-            "ORIONIS_DATASTORE_BACKEND", default_datastore_backend
-        ).lower()
+
+        storage_backend = os.getenv("STORAGE_BACKEND", os.getenv("ORIONIS_BACKEND", "")).lower()
+        datastore_backend = "sqlite" if storage_backend == "local" else "gcp"
 
         if datastore_backend == "sqlite":
-            default_sqlite_path = _get_repo_root() / ".orionis" / "orionis.sqlite3"
+            default_sqlite_path = _get_shared_state_root() / "sqlite" / "qai.sqlite3"
             sqlite_db_path = os.getenv(
-                "ORIONIS_SQLITE_DB_PATH", str(default_sqlite_path)
+                "STORAGE_SQLITE_DB_PATH",
+                os.getenv("ORIONIS_SQLITE_DB_PATH", str(default_sqlite_path))
             )
             self.client = SQLiteDatastoreClient(sqlite_db_path=sqlite_db_path)
         else:
@@ -44,18 +51,16 @@ class GCPDatastoreWrapper:
 class GCPFileStorageWrapper:
     def __init__(self):
         self.env_prefix = "-prod" if config.environment == Config.PRODUCTION else ""
-        backend_mode = os.getenv("ORIONIS_BACKEND", "").lower()
-        default_file_backend = "local" if backend_mode == "local" else "gcp"
-        self._file_storage_backend = os.getenv(
-            "ORIONIS_FILE_STORAGE_BACKEND", default_file_backend
-        ).lower()
+
+        storage_backend = os.getenv("STORAGE_BACKEND", os.getenv("ORIONIS_BACKEND", "")).lower()
+        self._file_storage_backend = "local" if storage_backend == "local" else "gcp"
         self._local_storage: LocalFileStorageWrapper | None = None
 
         if self._file_storage_backend == "local":
-            default_storage_root = _get_repo_root() / ".orionis" / "storage"
+            default_storage_root = _get_shared_state_root() / "storage"
             local_storage_root = os.getenv(
-                "ORIONIS_LOCAL_STORAGE_ROOT",
-                str(default_storage_root),
+                "STORAGE_LOCAL_ROOT",
+                os.getenv("ORIONIS_LOCAL_STORAGE_ROOT", str(default_storage_root)),
             )
             self._local_storage = LocalFileStorageWrapper(
                 root_directory=local_storage_root,
@@ -369,10 +374,11 @@ class GmailWrapper:
     def __init__(self):
         self.delegated_user = Constants.GMAIL_DELEGATED_USER
         self.scopes = [Constants.GMAIL_SCOPE_SEND]
-        backend_mode = os.getenv("ORIONIS_BACKEND", "").lower()
+
+        storage_backend = os.getenv("STORAGE_BACKEND", os.getenv("ORIONIS_BACKEND", "")).lower()
         self.enabled = (
             os.getenv("ORIONIS_ENABLE_GMAIL", "false").lower() == "true"
-            if backend_mode == "local"
+            if storage_backend == "local"
             else True
         )
         self.service = None

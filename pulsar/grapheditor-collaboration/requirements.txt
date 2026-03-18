@@ -6,3 +6,5 @@ nanoid
 google-cloud-storage
 google-cloud-datastore
 pydantic
+sqlalchemy
+
