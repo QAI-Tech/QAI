@@ -3,15 +3,20 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
-from google.cloud import datastore
 
 from app.services.features.feature_models import Feature
+from app.common.google_cloud_wrappers import GCPDatastoreWrapper
 
 logger = logging.getLogger(__name__)
 
 
 class FeatureDatastore:
-    """Datastore operations for Features"""
+    """Datastore operations for Features.
+    
+    Uses GCPDatastoreWrapper which auto-selects between SQLite (local) and 
+    Google Datastore (GCP) based on ORIONIS_BACKEND environment variable.
+    This allows Feature persistence to be shared with Orionis.
+    """
 
     ENTITY_KIND = "Feature"
     FIELD_PRODUCT_ID = "product_id"
@@ -25,48 +30,14 @@ class FeatureDatastore:
     FIELD_ORIGINAL_ID = "original_id"  # For storing string IDs (nanoid)
 
     def __init__(self):
-        """Initialize Datastore client"""
+        """Initialize shared Datastore client (SQLite or GCP based on backend)"""
         try:
-            project_id = self._get_gcp_project_id()
-            if not project_id:
-                logger.error("GCP project_id not found, please set GCP_PROJECT_ID environment variable")
-                raise ValueError("GCP project_id not found, please set GCP_PROJECT_ID environment variable")
-
-            use_grpc = os.getenv("DATASTORE_USE_GRPC", "").strip().lower() in ("1", "true", "yes")
-            
-            if use_grpc:
-                # Use default client (may use gRPC)
-                self.client = datastore.Client(project=project_id)
-                logger.info(f"FeatureDatastore initialized with gRPC transport for project: {project_id}")
-            else:
-                # Force HTTP/REST transport (non-gRPC) - compatible with eventlet
-                try:
-                    # Try _use_grpc parameter (newer API)
-                    self.client = datastore.Client(project=project_id, _use_grpc=False)
-                    logger.info(f"FeatureDatastore initialized with HTTP/REST transport (non-gRPC) for project: {project_id}")
-                except TypeError as e:
-                    logger.error(f"Failed to initialize Datastore client with HTTP/REST transport: {e}")
-                    raise
+            self.client = GCPDatastoreWrapper().get_datastore_client()
+            backend_info = "SQLite (shared with Orionis)" if hasattr(self.client, '_engine') else "Google Datastore"
+            logger.info(f"FeatureDatastore initialized with {backend_info} backend")
         except Exception as e:
             logger.error(f"Failed to initialize Datastore client: {e}")
             raise
-
-    def _get_gcp_project_id(self) -> str:
-        """Get GCP project ID based on environment (staging vs production).
-
-        """
-
-        env = os.getenv('ENVIRONMENT', 'development')
-        if env == 'production':
-
-            project_id = 'qai-tech'
-            logger.debug(f"Environment is production, using project_id: {project_id}")
-        else:
-
-            project_id = 'qai-tech-staging'
-            logger.debug(f"Environment is {env}, using staging project_id: {project_id}")
-        
-        return project_id
 
     def get_features(self, product_id: str) -> List[Feature]:
         """Get all features for a product_id"""
@@ -130,7 +101,7 @@ class FeatureDatastore:
 
             key = self.client.key(self.ENTITY_KIND)
 
-            entity = datastore.Entity(key=key)
+            entity = self.client.entity(key=key)
             now = datetime.now(timezone.utc)
             
             entity.update({
