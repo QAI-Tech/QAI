@@ -3,8 +3,8 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+from pathlib import Path
 from google.cloud import storage
-import tempfile
 from app.model.graph_models import Feature as CollaborationFeature
 from app.model.graph_models import Flow as CollaborationFlow
 from app.services.features.feature_service import FeatureService
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class GraphService:
-    """Service for handling graph data persistence to Google Cloud Storage"""
+    """Service for handling graph data persistence via GCS or local filesystem."""
 
     def __init__(self, config, feature_service: FeatureService, flow_service: FlowService = None):
         self.config = config
@@ -21,12 +21,23 @@ class GraphService:
         self.service_account_path = os.getenv('GCP_SERVICE_ACCOUNT_PATH', 'gcp-service-account.json')
         self.feature_service = feature_service 
         self.flow_service = flow_service
+
+        self.storage_backend = os.getenv('STORAGE_BACKEND', 'gcs').lower()
         
         # Determine bucket based on environment
         self.bucket_name = self._get_bucket_name()
+
+        default_local_storage_root = getattr(config, 'STORAGE_DIR', 'storage')
+        self.local_storage_root = Path(
+            os.getenv('STORAGE_LOCAL_ROOT', default_local_storage_root)
+        ).expanduser().resolve()
+        if self.storage_backend == 'local':
+            self.local_storage_root.mkdir(parents=True, exist_ok=True)
         
-        # Initialize GCS client
-        self.storage_client = self._init_storage_client()
+
+        self.storage_client = None
+        if self.storage_backend == 'gcs':
+            self.storage_client = self._init_storage_client()
 
         # Timeout (seconds) for GCS metadata/content calls to avoid long hangs
         try:
@@ -34,6 +45,7 @@ class GraphService:
         except Exception:
             self.gcs_timeout_seconds = 15
         logger.debug("GCS timeout seconds set to %s", self.gcs_timeout_seconds)
+        logger.info("GraphService storage backend: %s", self.storage_backend)
         
     def _get_bucket_name(self) -> str:
         """Determine bucket name based on environment"""
@@ -59,7 +71,7 @@ class GraphService:
             raise e
 
     def _get_file_path(self, product_id: str, file_type: str) -> str:
-        """Generate the GCS file path for a given product and file type"""
+        """Generate object-style file path for a given product and file type."""
         file_mapping = {
             'graph': 'graph-export.json',
             'features': 'features-export.json',
@@ -73,10 +85,41 @@ class GraphService:
             
         return f"qai-upload-temporary/productId_{product_id}/{filename}"
 
+    def _resolve_local_file_path(self, file_path: str) -> Path:
+        """Resolve an object path to local storage.
+        
+        In local mode, we don't need to embed the bucket name in the path.
+        The filesystem itself provides the directory structure.
+        """
+        return self.local_storage_root / file_path
+
+    def _upload_json_to_local(self, file_path: str, data: Any) -> bool:
+        """Upload JSON data to local storage path mirroring bucket/object layout."""
+        try:
+            target_path = self._resolve_local_file_path(file_path)
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            json_string = json.dumps(data, indent=2, ensure_ascii=False)
+            tmp_path = target_path.with_suffix(target_path.suffix + '.tmp')
+            tmp_path.write_text(json_string, encoding='utf-8')
+            os.replace(tmp_path, target_path)
+            logger.info("Successfully saved to local storage: %s", target_path)
+            return True
+        except Exception as e:
+            logger.error("Failed to save to local storage %s: %s", file_path, e)
+            return False
+
+    def _download_json_from_local(self, file_path: str) -> Any:
+        """Download JSON data from local storage path mirroring bucket/object layout."""
+        target_path = self._resolve_local_file_path(file_path)
+        if not target_path.exists():
+            raise FileNotFoundError(f"File not found in local storage: {target_path}")
+        json_string = target_path.read_text(encoding='utf-8')
+        return json.loads(json_string)
+
     def save_graph_data(self, product_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Save complete graph data (nodes, edges, features, flows, comments) to GCS
-        Features are saved to Datastore, not GCS.
+        Save complete graph data (nodes, edges, features, flows, comments).
+        Features and flows are saved to Datastore, not object storage.
         
         Args:
             product_id: The product identifier
@@ -87,16 +130,17 @@ class GraphService:
         """
         try:
             results = {}
-            bucket = self.storage_client.bucket(self.bucket_name)
+            bucket = self.storage_client.bucket(self.bucket_name) if self.storage_backend == 'gcs' else None
             
             # Save each data type (skipping features and flows - they go to Datastore)
             for data_type in ['graph', 'comments']:
                 data_key = f"{data_type}_data"
                 if data_key in data:
                     file_path = self._get_file_path(product_id, data_type)
-                    success = self._upload_json_to_gcs(
-                        bucket, file_path, data[data_key]
-                    )
+                    if self.storage_backend == 'gcs':
+                        success = self._upload_json_to_gcs(bucket, file_path, data[data_key])
+                    else:
+                        success = self._upload_json_to_local(file_path, data[data_key])
                     results[data_type] = {
                         'success': success,
                         'path': file_path
@@ -131,8 +175,8 @@ class GraphService:
 
     def save_individual_data(self, product_id: str, data_type: str, data: Any) -> Dict[str, Any]:
         """
-        Save individual data type (graph, features, flows, or comments) to GCS
-        Features are saved to Datastore, not GCS.
+        Save individual data type (graph, features, flows, or comments).
+        Features and flows are saved to Datastore, not object storage.
         
         Args:
             product_id: The product identifier
@@ -158,10 +202,13 @@ class GraphService:
             }
         
         try:
-            bucket = self.storage_client.bucket(self.bucket_name)
+            bucket = self.storage_client.bucket(self.bucket_name) if self.storage_backend == 'gcs' else None
             file_path = self._get_file_path(product_id, data_type)
-            
-            success = self._upload_json_to_gcs(bucket, file_path, data)
+
+            if self.storage_backend == 'gcs':
+                success = self._upload_json_to_gcs(bucket, file_path, data)
+            else:
+                success = self._upload_json_to_local(file_path, data)
             
             return {
                 'success': success,
@@ -180,8 +227,8 @@ class GraphService:
 
     def load_graph_data(self, product_id: str) -> Dict[str, Any]:
         """
-        Load complete graph data from GCS and Datastore
-        Features are loaded from Datastore, not GCS.
+        Load complete graph data from object storage and Datastore.
+        Features and flows are loaded from Datastore when available.
         
         Args:
             product_id: The product identifier
@@ -190,7 +237,7 @@ class GraphService:
             Dictionary containing all graph data or error message
         """
         try:
-            bucket = self.storage_client.bucket(self.bucket_name)
+            bucket = self.storage_client.bucket(self.bucket_name) if self.storage_backend == 'gcs' else None
             data = {}
             
             # Load each data type (skip features and flows - they come from Datastore)
@@ -199,12 +246,14 @@ class GraphService:
                 try:
                     logger.info("Loading %s data from %s", data_type, file_path)
 
-                    # Create a local Blob object (no RPC). bucket.blob() does not perform network calls
-                    blob = bucket.blob(file_path)
-                    logger.debug("Created local blob object for %s (no RPC)", file_path)
+                    if self.storage_backend == 'gcs':
 
-                    # Attempt to download - _download_json_from_gcs handles NotFound and other errors
-                    json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                        blob = bucket.blob(file_path)
+                        logger.debug("Created local blob object for %s (no RPC)", file_path)
+
+                        json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                    else:
+                        json_data = self._download_json_from_local(file_path)
 
                     # Avoid spamming logs with huge payloads; truncate for diagnostics
                     try:
@@ -241,20 +290,26 @@ class GraphService:
                     logger.info(f"Loaded {len(features)} features from Datastore for product {product_id}")
                 except Exception as e:
                     logger.error(f"Error loading features from Datastore: {e}")
-                    # Fallback to GCS
+                    # Fallback to object storage
                     try:
                         file_path = self._get_file_path(product_id, 'features')
-                        blob = bucket.blob(file_path)
-                        json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                        if self.storage_backend == 'gcs':
+                            blob = bucket.blob(file_path)
+                            json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                        else:
+                            json_data = self._download_json_from_local(file_path)
                         data['features_data'] = json_data
                     except Exception:
                         data['features_data'] = self._get_default_data('features')
             else:
-                # Fallback to GCS if FeatureService not available
+                # Fallback to object storage if FeatureService not available
                 try:
                     file_path = self._get_file_path(product_id, 'features')
-                    blob = bucket.blob(file_path)
-                    json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                    if self.storage_backend == 'gcs':
+                        blob = bucket.blob(file_path)
+                        json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                    else:
+                        json_data = self._download_json_from_local(file_path)
                     data['features_data'] = json_data
                 except Exception:
                     data['features_data'] = self._get_default_data('features')
@@ -267,7 +322,7 @@ class GraphService:
                         # Convert Flow to CollaborationFlow dict
                         flow_dict = f.dict(exclude_none=True)
                         # Ensure compatibility with CollaborationFlow model
-                        flows_list.append(CollaboratsionFlow(**flow_dict).model_dump(exclude_none=True))
+                        flows_list.append(CollaborationFlow(**flow_dict).model_dump(exclude_none=True))
                     if not flows_list:
                         print("No flows found in Datastore for product", product_id)
                         raise ValueError("No flows found in Datastore for product", product_id)
@@ -275,21 +330,27 @@ class GraphService:
                     logger.info(f"Loaded {len(flows)} flows from Datastore for product {product_id}")
                 except Exception as e:
                     logger.error(f"Error loading flows from Datastore: {e}")
-                    # Fallback to GCS
+                    # Fallback to object storage
                     try:
                         file_path = self._get_file_path(product_id, 'flows')
-                        blob = bucket.blob(file_path)
-                        json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                        if self.storage_backend == 'gcs':
+                            blob = bucket.blob(file_path)
+                            json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                        else:
+                            json_data = self._download_json_from_local(file_path)
                         data['flows_data'] = json_data
                     except Exception:
                         data['flows_data'] = self._get_default_data('flows')
             else:
-                 # Fallback to GCS if FlowService not available
-                print("FlowService not available, falling back to GCS")
+                 # Fallback to object storage if FlowService not available
+                print("FlowService not available, falling back to object storage")
                 try:
                     file_path = self._get_file_path(product_id, 'flows')
-                    blob = bucket.blob(file_path)
-                    json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                    if self.storage_backend == 'gcs':
+                        blob = bucket.blob(file_path)
+                        json_data = self._download_json_from_gcs(bucket, file_path, blob)
+                    else:
+                        json_data = self._download_json_from_local(file_path)
                     data['flows_data'] = json_data
                 except Exception:
                     data['flows_data'] = self._get_default_data('flows')
@@ -310,8 +371,8 @@ class GraphService:
 
     def load_individual_data(self, product_id: str, data_type: str) -> Dict[str, Any]:
         """
-        Load individual data type from GCS or Datastore
-        Features are loaded from Datastore, not GCS.
+        Load individual data type from object storage or Datastore.
+        Features and flows are loaded from Datastore when available.
         
         Args:
             product_id: The product identifier
@@ -345,10 +406,7 @@ class GraphService:
                     }
                 except Exception as e:
                     logger.error(f"Error loading features from Datastore: {e}")
-
-            else:
-                # Fallback to GCS if FeatureService not available
-                pass
+            # Fallback to object storage path below
         
         if data_type == 'flows':
             if self.flow_service:
@@ -367,15 +425,17 @@ class GraphService:
                     }
                 except Exception as e:
                     logger.error(f"Error loading flows from Datastore: {e}")
-            else:
-                 pass
+            # Fallback to object storage path below
         
         try:
-            bucket = self.storage_client.bucket(self.bucket_name)
             file_path = self._get_file_path(product_id, data_type)
-            
-            blob = bucket.blob(file_path)
-            json_data = self._download_json_from_gcs(bucket, file_path, blob)
+
+            if self.storage_backend == 'gcs':
+                bucket = self.storage_client.bucket(self.bucket_name)
+                blob = bucket.blob(file_path)
+                json_data = self._download_json_from_gcs(bucket, file_path, blob)
+            else:
+                json_data = self._download_json_from_local(file_path)
             
             return {
                 'success': True,
@@ -396,7 +456,8 @@ class GraphService:
 
     def generate_signed_url(self, product_id: str, data_type: str, expiration_minutes: int = 15) -> Dict[str, Any]:
         """
-        Generate a signed URL for direct upload to GCS
+        Generate a signed URL for direct upload to GCS.
+        In local mode, returns a file URI target instead.
         
         Args:
             product_id: The product identifier
@@ -407,6 +468,20 @@ class GraphService:
             Dictionary containing signed URL and metadata
         """
         try:
+            if self.storage_backend == 'local':
+                file_path = self._get_file_path(product_id, data_type)
+                target_path = self._resolve_local_file_path(file_path)
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                return {
+                    'success': True,
+                    'signed_url': target_path.as_uri(),
+                    'file_path': file_path,
+                    'bucket_name': self.bucket_name,
+                    'expires_in_minutes': expiration_minutes,
+                    'content_type': 'application/json',
+                    'backend': 'local'
+                }
+
             bucket = self.storage_client.bucket(self.bucket_name)
             file_path = self._get_file_path(product_id, data_type)
             blob = bucket.blob(file_path)
@@ -426,7 +501,8 @@ class GraphService:
                 'file_path': file_path,
                 'bucket_name': self.bucket_name,
                 'expires_in_minutes': expiration_minutes,
-                'content_type': 'application/json'
+                'content_type': 'application/json',
+                'backend': 'gcs'
             }
             
         except Exception as e:
@@ -522,8 +598,19 @@ class GraphService:
         return defaults.get(data_type, {})
 
     def get_bucket_info(self) -> Dict[str, Any]:
-        """Get information about the configured bucket"""
+        """Get information about the configured object storage backend."""
         try:
+            if self.storage_backend == 'local':
+                root_exists = self.local_storage_root.exists()
+                return {
+                    'bucket_name': self.bucket_name,
+                    'exists': root_exists,
+                    'project_id': self.project_id,
+                    'environment': os.getenv('ENVIRONMENT', 'development'),
+                    'backend': 'local',
+                    'local_storage_root': str(self.local_storage_root),
+                }
+
             bucket = self.storage_client.bucket(self.bucket_name)
             exists = bucket.exists()
             
@@ -531,7 +618,8 @@ class GraphService:
                 'bucket_name': self.bucket_name,
                 'exists': exists,
                 'project_id': self.project_id,
-                'environment': os.getenv('ENVIRONMENT', 'development')
+                'environment': os.getenv('ENVIRONMENT', 'development'),
+                'backend': 'gcs'
             }
         except Exception as e:
             logger.error(f"Error getting bucket info: {e}")

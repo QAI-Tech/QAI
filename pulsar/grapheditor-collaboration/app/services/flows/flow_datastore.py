@@ -2,18 +2,24 @@ import os
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from google.cloud import datastore
 
 from app.services.flows.flow_models import Flow
 from app.model.graph_models import Scenario
+from app.common.google_cloud_wrappers import GCPDatastoreWrapper
 
 logger = logging.getLogger(__name__)
 
 
 class FlowDatastore:
-    """Datastore operations for Flows"""
+    """Datastore operations for Flows.
+    
+    Uses GCPDatastoreWrapper which auto-selects between SQLite (local) and
+    Google Datastore (GCP) based on ORIONIS_BACKEND environment variable.
+    This allows Flow persistence to be shared with Orionis.
+    """
 
     ENTITY_KIND = "Flow"
+    FIELD_ID = "id"
     FIELD_PRODUCT_ID = "product_id"
     FIELD_NAME = "name"
     FIELD_DESCRIPTION = "description"
@@ -32,39 +38,15 @@ class FlowDatastore:
     FIELD_UPDATED_AT = "updated_at"
 
     def __init__(self):
-        """Initialize Datastore client"""
+        """Initialize shared Datastore client (SQLite or GCP based on backend)"""
         try:
-            project_id = self._get_gcp_project_id()
-            if not project_id:
-                logger.error("GCP project_id not found, please set GCP_PROJECT_ID environment variable")
-                raise ValueError("GCP project_id not found, please set GCP_PROJECT_ID environment variable")
-
-            use_grpc = os.getenv("DATASTORE_USE_GRPC", "").strip().lower() in ("1", "true", "yes")
-            
-            if use_grpc:
-                self.client = datastore.Client(project=project_id)
-                logger.info(f"FlowDatastore initialized with gRPC transport for project: {project_id}")
-            else:
-                try:
-                    self.client = datastore.Client(project=project_id, _use_grpc=False)
-                    logger.info(f"FlowDatastore initialized with HTTP/REST transport (non-gRPC) for project: {project_id}")
-                except TypeError as e:
-                    logger.error(f"Failed to initialize Datastore client with HTTP/REST transport: {e}")
-                    raise
+            self.client = GCPDatastoreWrapper().get_datastore_client()
+            self._is_sqlite_backend = hasattr(self.client, '_engine')
+            backend_info = "SQLite (shared with Orionis)" if self._is_sqlite_backend else "Google Datastore"
+            logger.info(f"FlowDatastore initialized with {backend_info} backend")
         except Exception as e:
             logger.error(f"Failed to initialize Datastore client: {e}")
             raise
-
-    def _get_gcp_project_id(self) -> str:
-        """Get GCP project ID based on environment (staging vs production)."""
-        env = os.getenv('ENVIRONMENT', 'development')
-        if env == 'production':
-            project_id = 'qai-tech'
-            logger.debug(f"Environment is production, using project_id: {project_id}")
-        else:
-            project_id = 'qai-tech-staging'
-            logger.debug(f"Environment is {env}, using staging project_id: {project_id}")
-        return project_id
 
     def get_flows(self, product_id: str) -> List[Flow]:
         """Get all flows for a product_id"""
@@ -89,9 +71,13 @@ class FlowDatastore:
     def add_flow(self, product_id: str, flow: Flow) -> Flow:
         """Add a new flow to Datastore"""
         try:
-            key = self.client.key(self.ENTITY_KIND)
-            entity = datastore.Entity(key=key)
+            if self._is_sqlite_backend:
+                key = self.client.key(self.ENTITY_KIND)
+            else:
+                key = self.client.key(self.ENTITY_KIND, flow.id) if flow.id else self.client.key(self.ENTITY_KIND)
+            entity = self.client.entity(key=key)
             now = datetime.now(timezone.utc)
+            flow_id = flow.id or f"flow-{int(now.timestamp() * 1000)}"
             
             scenarios_data = [s.dict() for s in flow.scenarios] if flow.scenarios else None
 
@@ -113,8 +99,11 @@ class FlowDatastore:
                 self.FIELD_UPDATED_AT: now,
             })
 
+            if self._is_sqlite_backend:
+                entity[self.FIELD_ID] = flow_id
+
             self.client.put(entity)
-            flow_id_str = str(entity.key.name)
+            flow_id_str = self._extract_flow_id(entity)
 
             logger.info(f"Added flow {flow.name} (id: {flow_id_str}) for product: {product_id}")
 
@@ -200,16 +189,14 @@ class FlowDatastore:
         try:
             entities = []
             now = datetime.now(timezone.utc)
-            key = self.client.key(self.ENTITY_KIND) # Placeholder key for kind
-
-            # Pre-allocate keys so we can return IDs immediately? 
-            # Datastore batch put assigns IDs. We need to map them back.
-            # Best way is to allocate keys first or just let put handle it and read from entities.
             
             for flow in flows:
-                # Use name as the key name (string ID)
-                entity_key = self.client.key(self.ENTITY_KIND, flow.id)
-                entity = datastore.Entity(key=entity_key)
+                flow_id = flow.id or f"flow-{int(now.timestamp() * 1000)}"
+                if self._is_sqlite_backend:
+                    entity_key = self.client.key(self.ENTITY_KIND)
+                else:
+                    entity_key = self.client.key(self.ENTITY_KIND, flow_id)
+                entity = self.client.entity(key=entity_key)
                 
                 scenarios_data = [s.dict() for s in flow.scenarios] if flow.scenarios else None
 
@@ -230,6 +217,8 @@ class FlowDatastore:
                     self.FIELD_CREATED_AT: now,
                     self.FIELD_UPDATED_AT: now,
                 })
+                if self._is_sqlite_backend:
+                    entity[self.FIELD_ID] = flow_id
                 entities.append(entity)
             
             # Batch put
@@ -240,7 +229,7 @@ class FlowDatastore:
             results = []
             for i, entity in enumerate(entities):
                 original_flow = flows[i]
-                flow_id_str = str(entity.key.name)
+                flow_id_str = self._extract_flow_id(entity)
                 results.append(original_flow.copy(update={"id": flow_id_str}))
                 
             logger.info(f"Batch added {len(results)} flows for product: {product_id}")
@@ -268,12 +257,24 @@ class FlowDatastore:
             
             if not flow_ids_to_check:
                 return []
-                
-            keys = [self.client.key(self.ENTITY_KIND, fid) for fid in flow_ids_to_check]
-            existing_entities = self.client.get_multi(keys)
-            
-            # Create a map for quick lookup
-            entity_map = {str(e.key.name): e for e in existing_entities}
+
+            if self._is_sqlite_backend:
+                existing_query = self.client.query(kind=self.ENTITY_KIND)
+                existing_query.add_filter(self.FIELD_PRODUCT_ID, "=", product_id)
+                existing_entities = list(existing_query.fetch())
+                entity_map = {
+                    str(e.get(self.FIELD_ID) or ""): e
+                    for e in existing_entities
+                    if e.get(self.FIELD_ID)
+                }
+            else:
+                keys = [self.client.key(self.ENTITY_KIND, fid) for fid in flow_ids_to_check]
+                existing_entities = self.client.get_multi(keys)
+                entity_map = {
+                    str(getattr(e.key, "name", "") or ""): e
+                    for e in existing_entities
+                    if e is not None
+                }
             
             entities_to_put = []
             updated_flows = []
@@ -309,16 +310,20 @@ class FlowDatastore:
                     # Update timestamp for existing
                     entity.update({self.FIELD_UPDATED_AT: now})
                 else:
-                    # Upsert: Create new entity with the specific ID
+                    # Upsert: Create new entity
                     try:
-                        key = self.client.key(self.ENTITY_KIND, flow_id)
-                        print("Creating new flow: ", flow_id)
-                        entity = datastore.Entity(key=key)
+                        if self._is_sqlite_backend:
+                            key = self.client.key(self.ENTITY_KIND)
+                        else:
+                            key = self.client.key(self.ENTITY_KIND, flow_id)
+                        entity = self.client.entity(key=key)
                         entity.update({
                             self.FIELD_PRODUCT_ID: product_id,
                             self.FIELD_CREATED_AT: now,
                             self.FIELD_UPDATED_AT: now
                         })
+                        if self._is_sqlite_backend:
+                            entity[self.FIELD_ID] = flow_id
                     except Exception as e:
                         logger.warning(f"Error creating flow entity key: {e}")
                         continue
@@ -350,16 +355,19 @@ class FlowDatastore:
             return
 
         try:
-            # We should technically verify they belong to product_id, 
-            # but for a delete optimization we might skip reading if we trust the IDs are scoped correct.
-            # However, safer to read-check-delete or query-keys-delete.
-            # Let's do get_multi to verify ownership (safe delete).
-            
-            keys = [self.client.key(self.ENTITY_KIND, fid) for fid in flow_ids]
-            entities = self.client.get_multi(keys)
+            if self._is_sqlite_backend:
+                query = self.client.query(kind=self.ENTITY_KIND)
+                query.add_filter(self.FIELD_PRODUCT_ID, "=", product_id)
+                query.add_filter(self.FIELD_ID, "IN", flow_ids)
+                entities = list(query.fetch())
+            else:
+                keys = [self.client.key(self.ENTITY_KIND, fid) for fid in flow_ids]
+                entities = self.client.get_multi(keys)
             
             keys_to_delete = []
             for entity in entities:
+                if entity is None:
+                    continue
                 if entity.get(self.FIELD_PRODUCT_ID) == product_id:
                     keys_to_delete.append(entity.key)
             
@@ -381,7 +389,7 @@ class FlowDatastore:
             scenarios = [Scenario(**s) for s in scenarios_data]
 
         return Flow(
-            id=str(entity.key.name),
+            id=self._extract_flow_id(entity),
             name=entity.get(self.FIELD_NAME),
             startNodeId=entity.get(self.FIELD_START_NODE_ID),
             endNodeId=entity.get(self.FIELD_END_NODE_ID),
@@ -400,9 +408,30 @@ class FlowDatastore:
     def _get_entity_by_flow_id(self, flow_id: str):
         """Get Datastore entity by flow_id"""
         try:
+            if self._is_sqlite_backend:
+                query = self.client.query(kind=self.ENTITY_KIND)
+                query.add_filter(self.FIELD_ID, "=", flow_id)
+                results = list(query.fetch(limit=1))
+                return results[0] if results else None
+
             key = self.client.key(self.ENTITY_KIND, flow_id)
-            entity = self.client.get(key)
-            return entity
+            return self.client.get(key)
         except Exception as e:
             logger.error(f"Error fetching flow by id {flow_id}: {e}")
             raise ValueError(f"Invalid flow_id format {flow_id}: {e}")
+
+    def _extract_flow_id(self, entity) -> str:
+        """Get flow id in a backend-compatible way."""
+        if entity is None:
+            return ""
+
+        flow_id = entity.get(self.FIELD_ID)
+        if flow_id:
+            return str(flow_id)
+
+        key_name = getattr(entity.key, "name", None)
+        if key_name:
+            return str(key_name)
+
+        key_id = getattr(entity.key, "id", None)
+        return str(key_id or "")

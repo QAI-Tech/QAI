@@ -2003,29 +2003,47 @@ class PersistenceService:
 
             return _rec(obj)
         except Exception:
-            logger.exception("Failed to serialize artifact for GCS backup; using empty default")
+            logger.exception("Failed to serialize artifact for periodic backup; using empty default")
             return {}
 
+    def _get_backup_backend_label(self, graph_service: Any) -> str:
+        """Return a human-readable backend label for backup logs."""
+        try:
+            backend = str(getattr(graph_service, 'storage_backend', 'gcs')).lower()
+            if backend == 'local':
+                return 'local object storage'
+            return 'gcs'
+        except Exception:
+            return 'gcs'
+
     def start_gcs_periodic_backup(self, room_id: str, graph_service, product_id: str, interval_seconds: int = 15) -> bool:
-        """Start a background thread that periodically uploads room artifacts to GCS."""
+        """Start a background thread that periodically uploads room artifacts to configured object storage."""
         if not graph_service:
-            logger.error("graph_service is required to start GCS periodic backup")
+            logger.error("graph_service is required to start periodic backup")
             return False
+
+        backend_label = self._get_backup_backend_label(graph_service)
 
         with self._gcs_backups_lock:
             if room_id in self._gcs_backup_savers:
-                logger.info("GCS backup already running for %s; restarting", room_id)
+                logger.info("Periodic backup already running for %s on %s; restarting", room_id, backend_label)
         try:
             if room_id in self._gcs_backup_savers:
                 try:
                     self.stop_gcs_periodic_backup(room_id)
                 except Exception:
-                    logger.exception("Error stopping existing GCS saver for %s", room_id)
+                    logger.exception("Error stopping existing periodic backup saver for %s", room_id)
 
             stop_event = threading.Event()
 
             def _worker():
-                logger.info("GCS periodic backup started for room %s (product=%s, interval=%s)", room_id, product_id, interval_seconds)
+                logger.info(
+                    "Periodic backup started for room %s (product=%s, interval=%s, backend=%s)",
+                    room_id,
+                    product_id,
+                    interval_seconds,
+                    backend_label,
+                )
                 with self._gcs_backups_lock:
                     entry = self._gcs_backup_savers.get(room_id)
                     if entry is not None:
@@ -2037,8 +2055,8 @@ class PersistenceService:
                     while not stop_event.wait(interval_seconds):
                         try:
                             iteration += 1
-                            logger.info("GCS backup iteration %s for room %s", iteration, room_id)
-                            logger.info("Acquiring data for GCS backup of room %s", room_id)
+                            logger.info("Periodic backup iteration %s for room %s", iteration, room_id)
+                            logger.info("Acquiring data for periodic backup of room %s", room_id)
                             graph_obj = self.room_graph.get(room_id)
                             flows = self.room_flows.get(room_id, [])
                             comments = self.room_comments.get(room_id, {})
@@ -2094,7 +2112,7 @@ class PersistenceService:
                                             logger.warning("GraphService has no recognized upload API; skipping upload")
                                             return {'success': False, 'message': 'no_upload_api'}
                                     except Exception:
-                                        logger.exception("Unhandled exception during GCS upload task for room %s", room_id)
+                                        logger.exception("Unhandled exception during periodic backup upload task for room %s", room_id)
                                         return {'success': False, 'exception': 'upload_failed'}
 
                                 if self._backup_executor:
@@ -2104,11 +2122,20 @@ class PersistenceService:
                                         try:
                                             res = fut.result()
                                             if not res or not res.get('success'):
-                                                logger.warning("GCS backup upload reported failure for room %s: %s", room_id, res)
+                                                logger.warning(
+                                                    "Periodic backup upload reported failure for room %s (backend=%s): %s",
+                                                    room_id,
+                                                    backend_label,
+                                                    res,
+                                                )
                                             else:
-                                                logger.info("GCS backup upload succeeded for room %s", room_id)
+                                                logger.info(
+                                                    "Periodic backup upload succeeded for room %s (backend=%s)",
+                                                    room_id,
+                                                    backend_label,
+                                                )
                                         except Exception:
-                                            logger.exception("GCS backup upload future failed for room %s", room_id)
+                                            logger.exception("Periodic backup upload future failed for room %s", room_id)
 
                                     try:
                                         future.add_done_callback(_upload_done)
@@ -2119,22 +2146,31 @@ class PersistenceService:
                                     # No dedicated executor: run inline (best-effort)
                                     res = _upload_task()
                                     if not res or not res.get('success'):
-                                        logger.warning("GCS backup upload reported failure for room %s: %s", room_id, res)
+                                        logger.warning(
+                                            "Periodic backup upload reported failure for room %s (backend=%s): %s",
+                                            room_id,
+                                            backend_label,
+                                            res,
+                                        )
                                     else:
-                                        logger.info("GCS backup upload succeeded for room %s", room_id)
+                                        logger.info(
+                                            "Periodic backup upload succeeded for room %s (backend=%s)",
+                                            room_id,
+                                            backend_label,
+                                        )
 
                             except Exception:
-                                logger.exception("Error while performing GCS backup upload for room %s", room_id)
+                                logger.exception("Error while performing periodic backup upload for room %s", room_id)
                         except Exception:
-                            logger.exception("Unhandled exception in GCS backup worker for room %s", room_id)
-                    logger.info("GCS periodic backup stopping for room %s", room_id)
+                            logger.exception("Unhandled exception in periodic backup worker for room %s", room_id)
+                    logger.info("Periodic backup stopping for room %s", room_id)
                 except Exception:
-                    logger.exception("Fatal exception in GCS backup worker for room %s", room_id)
+                    logger.exception("Fatal exception in periodic backup worker for room %s", room_id)
                     with self._gcs_backups_lock:
                         if room_id in self._gcs_backup_savers:
                             self._gcs_backup_savers[room_id]['failed_at'] = time.time()
                 finally:
-                    logger.info("GCS periodic backup stopping for room %s", room_id)
+                    logger.info("Periodic backup stopping for room %s", room_id)
 
             with self._gcs_backups_lock:
                 self._gcs_backup_savers[room_id] = {
@@ -2158,14 +2194,14 @@ class PersistenceService:
                 if self._gcs_monitor_thread is None or not self._gcs_monitor_thread.is_alive():
                     self._start_gcs_monitor()
             except Exception:
-                logger.exception("Failed to start GCS monitor thread")
+                logger.exception("Failed to start periodic backup monitor thread")
             return True
         except Exception:
-            logger.exception("Failed to start GCS backup thread for room %s", room_id)
+            logger.exception("Failed to start periodic backup thread for room %s", room_id)
             return False
 
     def stop_gcs_periodic_backup(self, room_id: str) -> bool:
-        """Stop a running GCS periodic backup for the specified room."""
+        """Stop a running periodic backup for the specified room."""
         if not hasattr(self, '_gcs_backup_savers'):
             return False
         entry = None
@@ -2177,11 +2213,11 @@ class PersistenceService:
             entry['stop_event'].set()
             entry['thread'].join(timeout=5)
         except Exception:
-            logger.exception("Error stopping GCS periodic backup for %s", room_id)
+            logger.exception("Error stopping periodic backup for %s", room_id)
         return True
 
     def stop_all_gcs_backups(self):
-        """Stop all running GCS periodic backups."""
+        """Stop all running periodic backups."""
         if not hasattr(self, '_gcs_backup_savers'):
             return
         with self._gcs_backups_lock:
@@ -2191,7 +2227,7 @@ class PersistenceService:
             try:
                 self.stop_gcs_periodic_backup(rid)
             except Exception:
-                logger.exception("Failed to stop GCS backup for %s", rid)
+                logger.exception("Failed to stop periodic backup for %s", rid)
 
         try:
             if self._gcs_monitor_stop_event is not None:
@@ -2199,7 +2235,7 @@ class PersistenceService:
             if self._gcs_monitor_thread is not None:
                 self._gcs_monitor_thread.join(timeout=2)
         except Exception:
-            logger.exception("Failed to stop GCS monitor thread")
+            logger.exception("Failed to stop periodic backup monitor thread")
         return
 
     def _start_gcs_monitor(self):
@@ -2210,7 +2246,7 @@ class PersistenceService:
         stop_ev = threading.Event()
 
         def _monitor():
-            logger.info("GCS monitor thread started")
+            logger.info("Periodic backup monitor thread started")
             while not stop_ev.wait(10):
                 try:
                     with self._gcs_backups_lock:
@@ -2227,7 +2263,7 @@ class PersistenceService:
                                 if failed_at and (time.time() - failed_at) < 5:
                                     logger.debug("Recent failure for %s; skipping immediate restart", rid)
                                     continue
-                                logger.warning("Detected dead GCS backup worker for room %s; restarting", rid)
+                                logger.warning("Detected dead periodic backup worker for room %s; restarting", rid)
                                 try:
                                     gs = entry.get('graph_service')
                                     if gs is None:
@@ -2235,12 +2271,12 @@ class PersistenceService:
                                         continue
                                     self.start_gcs_periodic_backup(rid, gs, prod or rid)
                                 except Exception:
-                                    logger.exception("Failed to restart GCS backup for %s", rid)
+                                    logger.exception("Failed to restart periodic backup for %s", rid)
                         except Exception:
                             logger.exception("Error inspecting saver entry for %s", rid)
                 except Exception:
                     logger.exception("Unhandled exception in GCS monitor loop")
-            logger.info("GCS monitor thread stopping")
+            logger.info("Periodic backup monitor thread stopping")
 
         thr = threading.Thread(target=_monitor, daemon=True)
         self._gcs_monitor_thread = thr
@@ -2253,7 +2289,7 @@ class PersistenceService:
             try:
                 self.stop_gcs_periodic_backup(room_id)
             except Exception:
-                logger.exception("Error stopping GCS backup during cleanup for %s", room_id)
+                logger.exception("Error stopping periodic backup during cleanup for %s", room_id)
 
             # self._save_room_state(room_id)
             if room_id in self.room_graph:

@@ -37,3 +37,4 @@ itunespy
 moviepy
 requests
 stripe
+sqlalchemy

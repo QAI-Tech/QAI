@@ -135,7 +135,7 @@ export const SERVER_IP_MAP: Record<string, string> = {
 export const GRAPH_COLLABORATION_SERVER_URL =
   process.env.NEXT_PUBLIC_APP_ENV === "production"
     ? "https://graphcollab-prod.qaitech.ai"
-    : "https://graphcollab-prod.qaitech.ai";
+    : "http://127.0.0.1:8001";
 
 export const BROWSER_DROID_SERVER_URLS = [
   "https://recordnplay.qaitech.ai",

@@ -43,12 +43,19 @@ class Config:
             )
         return value
 
+    @staticmethod
+    def _is_local_storage_mode() -> bool:
+        """Return True when running with local storage backend."""
+        backend = os.getenv("STORAGE_BACKEND", os.getenv("ORIONIS_BACKEND", "")).lower()
+        return backend == "local"
+
     @classmethod
     def load(cls: Type[Config]) -> Config:
         """Load configuration based on environment as a Singleton."""
         if cls._instance is None:
             environment = os.getenv("ENVIRONMENT", cls.PRODUCTION).lower()
             env_suffix = "_" + environment.upper()
+            is_local_storage = cls._is_local_storage_mode()
 
             team_qai_org_id_map = {
                 cls.STAGING: "5629659324612608",
@@ -57,8 +64,16 @@ class Config:
 
             cls._instance = cls(
                 environment=environment,
-                path_to_gcp_creds=cls._get_env("PATH_TO_GCP_CREDS", env_suffix),
-                gcp_project_id=cls._get_env("GCP_PROJECT_ID", env_suffix),
+                path_to_gcp_creds=(
+                    os.getenv(f"PATH_TO_GCP_CREDS{env_suffix}", "")
+                    if is_local_storage
+                    else cls._get_env("PATH_TO_GCP_CREDS", env_suffix)
+                ),
+                gcp_project_id=(
+                    os.getenv(f"GCP_PROJECT_ID{env_suffix}", "")
+                    if is_local_storage
+                    else cls._get_env("GCP_PROJECT_ID", env_suffix)
+                ),
                 gemini_api_key=cls._get_env("GEMINI_API_KEY", env_suffix),
                 clerk_jwks_url=cls._get_env("CLERK_JWKS_URL", env_suffix),
                 clerk_publishable_key=cls._get_env(
