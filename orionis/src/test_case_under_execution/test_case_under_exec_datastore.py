@@ -1064,7 +1064,7 @@ class TestCaseUnderExecutionDatastore:
         try:
             orionis_log("Adding a new test case under execution to datastore")
 
-            entity = datastore.Entity(
+            entity = self.db.entity(
                 key=self.db.key(
                     TestCaseUnderExecutionDatastore.ENTITY_KIND_TEST_CASE_UNDER_EXECUTION
                 )

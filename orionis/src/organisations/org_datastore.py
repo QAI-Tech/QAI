@@ -43,7 +43,7 @@ class OrganisationDatastore:
 
     def add_organisation(self, organisation_name: str, user_id: str) -> Organisation:
 
-        entity = datastore.Entity(key=self.db.key(self.ENTITY_KIND_ORG))
+        entity = self.db.entity(key=self.db.key(self.ENTITY_KIND_ORG))
 
         entity.update(
             {

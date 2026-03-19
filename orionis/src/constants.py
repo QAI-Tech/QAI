@@ -225,7 +225,7 @@ class Constants:
     GRAPH_COLLAB_API_URL = (
         "https://graphcollab-prod.qaitech.ai"
         if config.environment == Config.PRODUCTION
-        else "https://graphcollab.qaitech.ai"
+        else "http://127.0.0.1:8001"
     )
 
     # Request status

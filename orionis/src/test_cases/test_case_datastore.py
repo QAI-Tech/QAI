@@ -240,9 +240,7 @@ class TestCaseDatastore:
             f"Max sort index: {max_sort_index} for product: {test_case.product_id}"
         )
 
-        test_case_entity = datastore.Entity(
-            key=self.db.key(Constants.ENTITY_RAW_TEST_CASE)
-        )
+        test_case_entity = self.db.entity(key=self.db.key(Constants.ENTITY_RAW_TEST_CASE))
 
         if metadata:
             test_case_entity.exclude_from_indexes.add(TestCaseDatastore.FIELD_METADATA)

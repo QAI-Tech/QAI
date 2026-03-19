@@ -2,6 +2,36 @@
 
 ## Setup
 
+### Open-source local backends (SQLite + local files)
+
+To run without GCP Datastore and GCS buckets, set one environment variable:
+
+```
+export ORIONIS_BACKEND=local
+```
+
+Defaults in local mode:
+
+- Datastore backend: `sqlite`
+- SQLite path: `<repo-root>/.orionis/orionis.sqlite3`
+- File storage backend: `local`
+- Local storage root: `<repo-root>/.orionis/storage`
+- Gmail sending: disabled
+
+These defaults are resolved from the repository root, not the shell working directory, so restarting the server from `src/` or the repo root uses the same persisted data.
+
+Optional overrides (only if you want custom paths/backends):
+
+```
+export ORIONIS_DATASTORE_BACKEND=sqlite
+export ORIONIS_SQLITE_DB_PATH=.orionis/orionis.sqlite3
+export ORIONIS_FILE_STORAGE_BACKEND=local
+export ORIONIS_LOCAL_STORAGE_ROOT=.orionis/storage
+export ORIONIS_ENABLE_GMAIL=true
+```
+
+This keeps existing datastore/service code unchanged while persisting data to local SQLite and filesystem storage.
+
 - **gcloud cli**:Set-up gcloud cli in your PC, by following this link
 
   [gcloud-doc](https://cloud.google.com/sdk/docs/install-sdk)
