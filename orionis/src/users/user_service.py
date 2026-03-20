@@ -490,19 +490,10 @@ class UserService:
         return product
 
     def _get_target_users(self, user: User, product: ProductEntity) -> List[User]:
-        super_users = [
-            user
-            for org_id in Constants.SUPER_USER_ORG_IDS + Constants.QA_SANDBOX_ORG_IDS
-            for user in self.datastore.get_users_with_organisation_id(org_id)
-        ]
+        users = self.datastore.get_users_with_organisation_id(product.organisation_id)
 
-        if user.organisation_id != product.organisation_id:
-            product_org_users = self.datastore.get_users_with_organisation_id(
-                product.organisation_id
-            )
-            users = super_users + product_org_users
-        else:
-            users = super_users
+        if user and all(u.user_id != user.user_id for u in users):
+            users.append(user)
 
         if not users:
             raise ValueError(
@@ -658,8 +649,4 @@ class UserService:
         return {"email": Constants.FIELD_TEST_RUN_RECEIVING_EMAIL, "message_id": result}
 
     def is_external_user(self, user_id: str) -> bool:
-        user = self.get_user(user_id)
-        return (
-            user.organisation_id
-            not in Constants.SUPER_USER_ORG_IDS + Constants.QA_SANDBOX_ORG_IDS
-        )
+        return False

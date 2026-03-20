@@ -186,13 +186,7 @@ class TestRunService:
                     product = self.product_datastore.get_product_from_id(
                         test_run.product_id
                     )
-                    if (
-                        config.environment == Config.PRODUCTION
-                        and product.organisation_id
-                        not in (
-                            Constants.SUPER_USER_ORG_IDS + Constants.QA_SANDBOX_ORG_IDS
-                        )
-                    ):
+                    if config.environment == Config.PRODUCTION:
 
                         user = self.user_service.get_user(user_id)
                         sent_email = self.user_service.send_emails_for_test_run_created(
@@ -582,13 +576,7 @@ class TestRunService:
                     product = self.product_datastore.get_product_from_id(
                         test_run.product_id
                     )
-                    if (
-                        config.environment == Config.PRODUCTION
-                        and product.organisation_id
-                        not in (
-                            Constants.SUPER_USER_ORG_IDS + Constants.QA_SANDBOX_ORG_IDS
-                        )
-                    ):
+                    if config.environment == Config.PRODUCTION:
                         user = self.user_service.get_user(user_id)
                         sent_email = self.user_service.send_emails_for_test_run_created(
                             user, test_run, product

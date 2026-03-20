@@ -66,20 +66,6 @@ class OrganisationService:
     ) -> ApiResponseEntity:
         """Service function to get all organisations."""
         try:
-            # Check if user is from super user organization
-            from constants import Constants
-
-            if organisation_id not in Constants.SUPER_USER_ORG_IDS:
-                orionis_log(
-                    f"User {user_id} with organization {organisation_id} attempted to access all organizations but is not a super user"
-                )
-                return ApiResponseEntity(
-                    response={
-                        "error": "Access denied. Only QAI super users can access all organizations."
-                    },
-                    status_code=ApiResponseEntity.HTTP_STATUS_FORBIDDEN,
-                )
-
             organisations = self.datastore.get_all_organisations()
 
             response_orgs = [
