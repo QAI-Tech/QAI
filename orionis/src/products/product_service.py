@@ -75,29 +75,23 @@ class ProductService:
                 )
 
             if config.environment == Config.PRODUCTION:
-
-                non_qai_user_org = new_product.organisation_id not in (
-                    Constants.SUPER_USER_ORG_IDS + Constants.QA_SANDBOX_ORG_IDS
+                message = (
+                    "🆕 *New Product Added!*\n"
+                    "A new product has been successfully created in the system.\n\n"
+                    f"📦 *Product Name:* `{new_product.product_name}`\n"
+                    f"🆔 *Product ID:* `{new_product.product_id}`\n"
+                    f"🏢 *Organisation ID:* `{new_product.organisation_id}`\n"
+                    f"🔗 *Product Link:* {Constants.DOMAIN}/{new_product.product_id}"
                 )
 
-                if non_qai_user_org:
-                    message = (
-                        "🆕 *New Product Added!*\n"
-                        "A new product has been successfully created in the system.\n\n"
-                        f"📦 *Product Name:* `{new_product.product_name}`\n"
-                        f"🆔 *Product ID:* `{new_product.product_id}`\n"
-                        f"🏢 *Organisation ID:* `{new_product.organisation_id}`\n"
-                        f"🔗 *Product Link:* {Constants.DOMAIN}/{new_product.product_id}"
+                try:
+                    self.notification_service.notify_slack(
+                        message, self.notification_service.slack_webhook_url
                     )
-
-                    try:
-                        self.notification_service.notify_slack(
-                            message, self.notification_service.slack_webhook_url
-                        )
-                    except Exception as e:
-                        orionis_log(
-                            f"Failed to send product creation notification: {e}", e
-                        )
+                except Exception as e:
+                    orionis_log(
+                        f"Failed to send product creation notification: {e}", e
+                    )
 
             product_dict = new_product.model_dump(mode="json")
             return ApiResponseEntity(

@@ -123,8 +123,6 @@ class TestCaseService:
                 raise ValueError("User not found")
             if (
                 config.environment == Config.PRODUCTION
-                and user.organisation_id
-                not in Constants.SUPER_USER_ORG_IDS + Constants.QA_SANDBOX_ORG_IDS
                 and test_case.request_id == "MANUAL"
             ):
                 self.notify_service.notify_new_test_case(test_case, user)
