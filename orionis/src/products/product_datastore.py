@@ -153,11 +153,6 @@ class ProductDatastore:
 
     def get_all_products(self, organisation_id: str) -> List[ProductEntity]:
         product_query = self.db.query(kind=self.FieldProduct.KIND)
-
-        if organisation_id != config.team_qai_org_id:
-            product_query.add_filter(
-                self.FieldProduct.ORGANISATION_ID, "=", organisation_id
-            )
         db_products = product_query.fetch()
 
         products = []
