@@ -124,7 +124,8 @@ async function handleLocalSignedUrlRequest(
     );
   }
 
-  const objectPath = normalizeObjectName(String(fileName));
+  const folderName = "qai-upload-temporary";
+  const objectPath = `${folderName}/${fileName}`;
   const uploadId = uuidv4();
 
   const signedUrl = `${req.nextUrl.origin}/api/local-storage-upload?bucketName=${encodeURIComponent(
