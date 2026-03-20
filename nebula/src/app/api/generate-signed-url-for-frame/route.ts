@@ -6,6 +6,37 @@ import {
   PRODUCT_DESIGN_ASSETS_BUCKET_NAME,
 } from "@/lib/constants";
 
+const isLocalStorageBackend =
+  (process.env.STORAGE_BACKEND || "").toLowerCase() === "local" ||
+  process.env.NEXT_PUBLIC_APP_ENV === "development";
+
+function parseStoragePath(path: string): { bucketName: string; filePath: string } | null {
+  if (!path) return null;
+
+  if (path.startsWith("gs://")) {
+    const withoutScheme = path.slice(5);
+    const slashIndex = withoutScheme.indexOf("/");
+    if (slashIndex <= 0) return null;
+    return {
+      bucketName: withoutScheme.slice(0, slashIndex),
+      filePath: withoutScheme.slice(slashIndex + 1),
+    };
+  }
+
+  const cloudPrefix = "https://storage.cloud.google.com/";
+  const normalized = path.startsWith(cloudPrefix)
+    ? path.slice(cloudPrefix.length)
+    : path;
+
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.length < 2) return null;
+
+  return {
+    bucketName: segments[0],
+    filePath: segments.slice(1).join("/"),
+  };
+}
+
 const storage = (() => {
   if (process.env.NODE_ENV === "production") {
     const gcsKeyFile = JSON.parse(process.env.GCS_KEY_FILE || "{}");
@@ -22,15 +53,22 @@ const storage = (() => {
 export async function GET(req: NextRequest) {
   try {
     const path = req.nextUrl.searchParams.get("framePath");
-    const bucketName = path?.split("/")[0] || PRODUCT_DESIGN_ASSETS_BUCKET_NAME;
-    //remove the first element from the array and join the rest of the elements to get the frame path
-    const framePath = path?.split("/").slice(1).join("/");
+    const parsedPath = path ? parseStoragePath(path) : null;
+    const bucketName = parsedPath?.bucketName || PRODUCT_DESIGN_ASSETS_BUCKET_NAME;
+    const framePath = parsedPath?.filePath;
 
     if (!framePath) {
       return NextResponse.json(
         { error: "Missing frame path query parameter" },
         { status: 400 },
       );
+    }
+
+    if (isLocalStorageBackend) {
+      const signedUrl = `${req.nextUrl.origin}/api/local-storage-file?bucketName=${encodeURIComponent(
+        bucketName,
+      )}&filePath=${encodeURIComponent(framePath)}`;
+      return NextResponse.json({ signedUrl });
     }
 
     const file = storage.bucket(bucketName).file(framePath);

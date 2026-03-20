@@ -11,6 +11,10 @@ import {
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import { constructUrl } from "@/lib/urlUtlis";
 
+const isLocalStorageBackend =
+  (process.env.STORAGE_BACKEND || "").toLowerCase() === "local" ||
+  process.env.NEXT_PUBLIC_APP_ENV === "development";
+
 const storage = (() => {
   if (process.env.NODE_ENV === "production") {
     const gcsKeyFile = JSON.parse(process.env.GCS_KEY_FILE || "{}");
@@ -86,6 +90,45 @@ async function handleSignedUrlRequest(req: NextRequest, bucketName: string) {
   );
 
   return NextResponse.json({ signedUrl, fileName: filePath, uploadId });
+}
+
+async function handleLocalSignedUrlRequest(
+  req: NextRequest,
+  bucketName: string,
+) {
+  if (req.headers.get("content-type") !== "application/json") {
+    return NextResponse.json(
+      { error: "Invalid content type. Expected application/json." },
+      { status: 415 },
+    );
+  }
+
+  const { fileName, contentType } = await req.json();
+
+  if (!fileName || !contentType) {
+    Sentry.captureException(new Error("Missing fileName or contentType"), {
+      level: "fatal",
+      tags: { priority: "high" },
+    });
+    return NextResponse.json(
+      { error: "Missing fileName or contentType" },
+      { status: 400 },
+    );
+  }
+
+  const folderName = "qai-upload-temporary";
+  const objectPath = `${folderName}/${fileName}`;
+  const uploadId = uuidv4();
+
+  const signedUrl = `${req.nextUrl.origin}/api/local-storage-upload?bucketName=${encodeURIComponent(
+    bucketName,
+  )}&filePath=${encodeURIComponent(objectPath)}`;
+
+  return NextResponse.json({
+    signedUrl,
+    fileName: `gs://${bucketName}/${objectPath}`,
+    uploadId,
+  });
 }
 
 async function handleFileProcessing(req: NextRequest) {
@@ -193,6 +236,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (isSignedUrlRequest) {
+      if (isLocalStorageBackend) {
+        return handleLocalSignedUrlRequest(req, bucketName);
+      }
       return handleSignedUrlRequest(req, bucketName);
     }
 
