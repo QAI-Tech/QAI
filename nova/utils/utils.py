@@ -1,5 +1,6 @@
 from tc_executor.vision import getSS
 import os, sys, json, shutil
+import requests
 from tc_generator.state import State 
 from gcp_upload.log_states import uploadVideoToGCP
 import cv2
@@ -155,6 +156,18 @@ def printJudgement(msg):
     print(f'-------------- {msg} ---------------')
     for i in range(3): print('----------------------------------------')
 
+def _trigger_update_execution_data(log_data):
+    """Directly call orionis update_execution_data API with log data (replaces EventArc trigger)."""
+    orionis_url = os.environ.get("ORIONIS_API_URL", "http://localhost:8080")
+    url = f"{orionis_url}/update_execution_data"
+    try:
+        nova_log(f"Triggering update_execution_data at {url}")
+        response = requests.post(url, json=log_data, timeout=30)
+        nova_log(f"update_execution_data response: {response.status_code} - {response.text}")
+    except Exception as e:
+        nova_log(f"Failed to trigger update_execution_data: {e}", e)
+
+
 def logFinalState(status, args, exceptions=[], explanation="", video_url=""):
     ss = getSS()
     adb_ss = getSS(is_adb=True)
@@ -168,7 +181,10 @@ def logFinalState(status, args, exceptions=[], explanation="", video_url=""):
     if status == "attempt_failed": state.changeStateToAttemptFailed()
     state.addIds(123456789, args.test_case_under_execution_id, args.test_run_id, args.product_id)
     bucket = construct_bucket_name('nova_assets', args.environment)
-    state.log(bucket, upload_to_gcp=True, video_url=video_url)
+    log_data = state.log(bucket, upload_to_gcp=True, video_url=video_url)
+
+    # Directly trigger update_nova_execution_data on orionis (replaces EventArc trigger)
+    _trigger_update_execution_data(log_data)
 
 def nova_log(message: str, error: Exception | None = None):
     # Get the caller's information using stack inspection

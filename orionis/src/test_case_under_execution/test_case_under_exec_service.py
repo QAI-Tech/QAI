@@ -464,7 +464,9 @@ class TestCaseUnderExecutionService:
     def update_nova_execution_data(
         self, request: ApiRequestEntity
     ) -> ApiResponseEntity:
-        """Main method to handle nova execution data updates."""
+        """Main method to handle nova execution data updates.
+        Accepts the log data directly in the request body (replaces EventArc/GCS trigger).
+        """
         if request.method != ApiRequestEntity.API_METHOD_POST:
             return ApiResponseEntity(
                 response={"error": "Method must be POST"},
@@ -477,47 +479,32 @@ class TestCaseUnderExecutionService:
             )
             data = request.data
             orionis_log(f"Extracted data for update execution: {data}")
-            # Extract bucket info and get log content
-            bucket_name = data["bucket"]
-            file_path = data["name"]
-            if not file_path.endswith("log.json"):
-                return ApiResponseEntity(
-                    response={
-                        "message": "Terminating: Only 'log.json' files are processed.",
-                    },
-                    status_code=ApiResponseEntity.HTTP_STATUS_OK,
-                )
-            orionis_log(f"File uploaded: gs://{bucket_name}/{file_path}")
-            file_uri = f"gs://{bucket_name}/{file_path}"
-            log_txt = self._read_blob_as_text(file_uri)
-            log_json = json.loads(log_txt)
+
+            # Validate the log data directly
             update_nova_execution_data_params = (
                 self.request_validator.validate_update_nova_execution_data_params(
-                    log_json
+                    data
                 )
             )
             orionis_log(
                 f"Updated log file from nova: {update_nova_execution_data_params}"
             )
 
-            # Check if this is the final state
-            if "state_final" not in file_path:
-                return ApiResponseEntity(
-                    response={"message": "Test Case is still under execution"},
-                    status_code=ApiResponseEntity.HTTP_STATUS_OK,
-                )
-
-            # Get and process log files
-            base_path = (
-                f"{update_nova_execution_data_params.product_id}/"
-                f"{update_nova_execution_data_params.test_run_id}/"
-                f"{update_nova_execution_data_params.test_case_under_execution_id}/"
-            )
-
-            sorted_blobs = self._get_sorted_log_files(bucket_name, base_path)
-            test_case_steps, preconditions = self._process_execution_data(
-                sorted_blobs, file_path
-            )
+            # Extract test_case_steps and preconditions from the log data
+            test_case_steps: list[TestCaseStep] = []
+            preconditions: list[str] = []
+            test_case_data = data.get("test_case")
+            if test_case_data and isinstance(test_case_data, dict):
+                step_desc = test_case_data.get("step_description", "")
+                expected_results = test_case_data.get("expected_results") or []
+                if step_desc:
+                    test_case_step = TestCaseStep(
+                        test_step_id=str(uuid4()),
+                        step_description=step_desc,
+                        expected_results=expected_results,
+                    )
+                    test_case_steps.append(test_case_step)
+                preconditions.extend(test_case_data.get("preconditions") or [])
 
             orionis_log(
                 f"test_case_steps; {test_case_steps} and preconds: {preconditions}"

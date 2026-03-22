@@ -224,5 +224,7 @@ class State:
             )
             system_logger.info('Logging state on gcp bucket done')
 
+        return output_data
+
 
             
