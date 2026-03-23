@@ -26,6 +26,15 @@ const storage = (() => {
   }
 })();
 
+function normalizeObjectName(fileName: string): string {
+  const normalized = String(fileName || "").trim().replace(/^\/+/, "");
+  const folderPrefix = "qai-upload-temporary/";
+  if (normalized.startsWith(folderPrefix)) {
+    return normalized;
+  }
+  return `${folderPrefix}${normalized}`;
+}
+
 // Generating a Signed URL for uploading a file to Google Cloud Storage
 // Full path including folder
 
@@ -34,8 +43,7 @@ async function generateSignedUrl(
   contentType: string,
   bucketName: string,
 ) {
-  const folderName = "qai-upload-temporary"; // Folder inside the bucket
-  const filePath = `${folderName}/${fileName}`;
+  const filePath = normalizeObjectName(fileName);
   const bucket = storage.bucket(bucketName);
   const file = bucket.file(filePath); // Use full path
 
@@ -81,7 +89,7 @@ async function handleSignedUrlRequest(req: NextRequest, bucketName: string) {
   }
 
   const uploadId = uuidv4();
-  const finalFileName = `${fileName}`;
+  const finalFileName = String(fileName);
 
   const { signedUrl, filePath } = await generateSignedUrl(
     finalFileName,
@@ -116,8 +124,7 @@ async function handleLocalSignedUrlRequest(
     );
   }
 
-  const folderName = "qai-upload-temporary";
-  const objectPath = `${folderName}/${fileName}`;
+  const objectPath = normalizeObjectName(String(fileName));
   const uploadId = uuidv4();
 
   const signedUrl = `${req.nextUrl.origin}/api/local-storage-upload?bucketName=${encodeURIComponent(
