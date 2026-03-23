@@ -274,7 +274,6 @@ export default function TestPlanning() {
         const response = await signedUrlResponse.json();
         const { signedUrl, fileName: videoFileName } = response;
         fileName = videoFileName;
-        fileName = convertGcsUriToUrl(videoFileName);
 
         const uploadResponse = await fetch(signedUrl, {
           method: "PUT",
@@ -290,10 +289,7 @@ export default function TestPlanning() {
         }
 
         uploadedVideoUrls.push(fileName);
-        console.log(
-          "Video uploaded successfully with converted URL:",
-          fileName,
-        );
+        console.log("Video uploaded successfully with URI:", fileName);
       }
 
       // Create payload for Maintainer Agent
