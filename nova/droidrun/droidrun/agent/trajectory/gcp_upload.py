@@ -1,7 +1,7 @@
 """
 GCP upload utilities for DroidRun trajectories.
 
-This module provides functionality to upload trajectory data to shared storage,
+This module provides functionality to upload trajectory data to Google Cloud Storage,
 following Nova's logging pattern with path structure: bucket/product_id/test_run_id/tcue_id/
 """
 
@@ -11,20 +11,32 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-from gcp_upload.google_cloud_wrappers import GCPFileStorageWrapper
-
 logger = logging.getLogger("droidrun")
 
 
 class GCPStorageWrapper:
-    """Wrapper for Nova/Orionis-backed storage operations."""
+    """Wrapper for Google Cloud Storage operations."""
 
     def __init__(self):
-        self._storage = GCPFileStorageWrapper()
+        self._client = None
+
+    @property
+    def client(self):
+        """Lazy-load the storage client."""
+        if self._client is None:
+            try:
+                from google.cloud import storage
+                self._client = storage.Client()
+            except ImportError:
+                raise ImportError(
+                    "google-cloud-storage is required for GCP uploads. "
+                    "Install it with: pip install google-cloud-storage"
+                )
+        return self._client
 
     def get_bucket(self, bucket_name: str):
         """Get a bucket object by name."""
-        return self._storage.get_bucket(bucket_name)
+        return self.client.bucket(bucket_name)
 
     def upload_file(
         self,
@@ -34,20 +46,21 @@ class GCPStorageWrapper:
         content_type: Optional[str] = None,
     ) -> str:
         """
-        Upload a file to shared storage.
+        Upload a file to GCS.
 
         Args:
             local_path: Path to local file
-            bucket_name: Name of the storage bucket
+            bucket_name: Name of the GCS bucket
             remote_path: Path in the bucket
             content_type: MIME type (auto-detected if None)
 
         Returns:
-            Storage URI of the uploaded file
+            GCS URI of the uploaded file
         """
         if not os.path.isfile(local_path):
             raise FileNotFoundError(f"File not found: {local_path}")
 
+        # Auto-detect content type based on extension
         if content_type is None:
             ext = os.path.splitext(local_path)[1].lower()
             content_type = {
@@ -63,6 +76,7 @@ class GCPStorageWrapper:
         bucket = self.get_bucket(bucket_name)
         blob = bucket.blob(remote_path)
 
+        # Use binary mode for images and videos, text mode for others
         if content_type.startswith("image/") or content_type.startswith("video/"):
             with open(local_path, "rb") as f:
                 blob.upload_from_file(f, content_type=content_type)
@@ -70,9 +84,9 @@ class GCPStorageWrapper:
             with open(local_path, "r", encoding="utf-8") as f:
                 blob.upload_from_string(f.read(), content_type=content_type)
 
-        storage_uri = f"gs://{bucket_name}/{remote_path}"
-        logger.debug(f"Uploaded {local_path} to {storage_uri}")
-        return storage_uri
+        gcs_uri = f"gs://{bucket_name}/{remote_path}"
+        logger.debug(f"Uploaded {local_path} to {gcs_uri}")
+        return gcs_uri
 
     def upload_directory(
         self,
@@ -82,17 +96,17 @@ class GCPStorageWrapper:
         file_extensions: Optional[list] = None,
     ) -> list:
         """
-        Upload all files from a directory to shared storage.
+        Upload all files from a directory to GCS.
 
         Args:
             local_dir: Path to local directory
-            bucket_name: Name of the storage bucket
+            bucket_name: Name of the GCS bucket
             remote_prefix: Prefix path in the bucket
             file_extensions: List of extensions to include (e.g., ['.json', '.png'])
                            If None, uploads all files
 
         Returns:
-            List of storage URIs of uploaded files
+            List of GCS URIs of uploaded files
         """
         local_path = Path(local_dir)
         if not local_path.is_dir():
@@ -104,9 +118,11 @@ class GCPStorageWrapper:
             if not item.is_file():
                 continue
 
+            # Filter by extension if specified
             if file_extensions and item.suffix.lower() not in file_extensions:
                 continue
 
+            # Calculate relative path for remote
             rel_path = item.relative_to(local_path)
             remote_path = f"{remote_prefix}/{rel_path}"
 
@@ -117,6 +133,7 @@ class GCPStorageWrapper:
                 logger.warning(f"Failed to upload {item}: {e}")
 
         return uploaded
+
 
 def upload_trajectory_to_gcp(
     trajectory_folder: str,

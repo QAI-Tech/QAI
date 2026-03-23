@@ -113,8 +113,12 @@ def returnGoalFormulationAndExecutionArgs(mode, req):
     WHEN_TO_USE_WHICH_UI_ELEMENT = req.get('WHEN_TO_USE_WHICH_UI_ELEMENT', 'No information available')
     EXPECTED_APP_BEHAVIOUR = req.get('EXPECTED_APP_BEHAVIOUR', 'No information available')
     environment = req.get('environment', 'staging')  # default to staging if not provided
-    kg_gcp_path = None
-    flows_gcp_path = None
+    if environment == 'staging':
+        kg_gcp_path = f'gs://graph-editor/qai-upload-temporary/productId_{product_id}/graph-export.json'
+    else: kg_gcp_path = f'gs://graph-editor-prod/qai-upload-temporary/productId_{product_id}/graph-export.json'
+    if environment == 'staging':
+        flows_gcp_path = f'gs://graph-editor/qai-upload-temporary/productId_{product_id}/flows-export.json'
+    else: flows_gcp_path = f'gs://graph-editor-prod/qai-upload-temporary/productId_{product_id}/flows-export.json'
 
     args_list = []
     for test_case_ref in req['test_case_reference']:
