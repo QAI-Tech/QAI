@@ -82,8 +82,11 @@ export const uploadVideo = async (
     return new Promise((resolve, reject) => {
       xhr.onload = async () => {
         if (xhr.status === 200) {
-          const fileNameWithoutPrefix = fileName.replace("gs://", "");
-          const videoUrl = `${GCS_BUCKET_URL}${fileNameWithoutPrefix}`;
+          const isLocalMode = process.env.NEXT_PUBLIC_APP_ENV === "development";
+          const gsFileName = String(fileName);
+          const videoUrl = isLocalMode
+            ? gsFileName
+            : `${GCS_BUCKET_URL}${gsFileName.replace("gs://", "")}`;
 
           try {
             // Set video URL in store

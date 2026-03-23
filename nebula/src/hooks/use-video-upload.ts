@@ -76,7 +76,8 @@ export function useVideoUpload({
 
       const { signedUrl, fileName: videoFileName } =
         await signedUrlResponse.json();
-      const fileName = videoFileName.replace("gs://", "");
+      const isLocalMode = process.env.NEXT_PUBLIC_APP_ENV === "development";
+      const fileName = String(videoFileName);
       console.log("File Name:", fileName);
 
       const uploadResponse = await fetch(signedUrl, {
@@ -96,7 +97,9 @@ export function useVideoUpload({
         throw new Error(`Failed to upload file: ${uploadResponse.status}`);
       }
 
-      const videoUrl = `${GCS_BUCKET_URL}${fileName}`;
+      const videoUrl = isLocalMode
+        ? fileName
+        : `${GCS_BUCKET_URL}${fileName.replace("gs://", "")}`;
       const success = await onVideoUpload(videoUrl);
 
       if (success) {

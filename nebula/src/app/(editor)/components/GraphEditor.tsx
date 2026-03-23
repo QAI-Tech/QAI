@@ -98,7 +98,6 @@ import {
 import { useProductSwitcher } from "@/providers/product-provider";
 import {
   GRAPH_BUCKET_NAME,
-  GCS_BUCKET_URL,
   GRAPH_COLLABORATION_SERVER_URL,
   BROWSER_DROID_SERVER_URLS,
 } from "@/lib/constants";
@@ -2467,8 +2466,7 @@ const GraphEditorFlow = ({
           xhr.onerror = () => reject(new Error("Network error during upload"));
           xhr.send(file);
         });
-        const fileNameWithoutPrefix = (fileName as string).replace("gs://", "");
-        const videoUrl = `${GCS_BUCKET_URL}${fileNameWithoutPrefix}`;
+        const videoUrl = fileName as string;
         dispatch(queueProgress({ id: queueId, progress: 90 }));
         await requestMaintainerAgent(
           queueId,
