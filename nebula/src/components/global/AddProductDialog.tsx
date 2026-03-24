@@ -314,7 +314,6 @@ const AddProductDialog = () => {
         level: "fatal",
         tags: { priority: "high" },
       });
-      user?.reload();
     } finally {
       setLoading(false);
     }

@@ -94,12 +94,12 @@ from test_build.test_build_datastore import TestBuildDatastore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-sentry_sdk.init(
-    dsn=config.sentry_dsn,
-    environment=config.environment,
-    send_default_pii=True,
-    traces_sample_rate=1.0,
-)
+# sentry_sdk.init(
+#     dsn=config.sentry_dsn,
+#     environment=config.environment,
+#     send_default_pii=True,
+#     traces_sample_rate=1.0,
+# )
 
 # TODO Re-use datastore and service instances that are already instantiated
 

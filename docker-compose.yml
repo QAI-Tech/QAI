@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  # ─── Orionis (Backend API) ────────────────────────────────
+  orionis:
+    build:
+      context: ./orionis
+      dockerfile: Dockerfile
+    container_name: qai-orionis
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.example
+    volumes:
+      - ./orionis/src:/app          # hot-reload in dev
+      - qai-storage:/app/.qai       # shared local storage
+    restart: unless-stopped
+
+  # ─── Pulsar Graph Editor Collaboration ────────────────────
+  graph-collab:
+    build:
+      context: ./pulsar/grapheditor-collaboration
+      dockerfile: Dockerfile
+    container_name: qai-graph-collab
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.example
+    volumes:
+      - ./pulsar/grapheditor-collaboration:/app  # hot-reload in dev
+      - qai-storage:/app/.qai                   # shared local storage
+    restart: unless-stopped
+
+  # ─── Nebula (Frontend – Next.js) ──────────────────────────
+  nebula:
+    build:
+      context: ./nebula
+      dockerfile: Dockerfile
+    container_name: qai-nebula
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.example
+    environment:
+      - NEXT_PUBLIC_APP_ENV=development
+    restart: unless-stopped
+
+  # # ─── Pulsar Browser-Droid ─────────────────────────────────
+  # browser-droid:
+  #   build:
+  #     context: ./pulsar/browser-droid
+  #     dockerfile: Dockerfile
+  #   container_name: qai-browser-droid
+  #   ports:
+  #     - "8000:8000"
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./pulsar/browser-droid:/app  # hot-reload in dev
+  #   restart: unless-stopped
+
+ 
+
+volumes:
+  qai-storage:

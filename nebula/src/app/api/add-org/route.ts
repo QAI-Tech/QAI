@@ -5,14 +5,13 @@ import {
 import * as Sentry from "@sentry/nextjs";
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import { constructUrl } from "@/lib/urlUtlis";
-import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
     const { addOrg } = await req.json();
-    const { organisation_name, firstNameClerk, lastNameClerk, email } = addOrg;
-    const { userId } = auth();
+    const { organisation_name } = addOrg;
+    // const { userId } = auth();
     const payload = {
       organisation_name: organisation_name,
     };
@@ -43,15 +42,15 @@ export async function POST(req: NextRequest) {
 
     const result = await response.json();
     console.log("Updated User details", result);
-    const clerk = clerkClient();
-    await clerk.users.updateUser(userId as string, {
-      publicMetadata: {
-        first_name: firstNameClerk, // Custom field name
-        last_name_clerk: lastNameClerk, // Custom field name
-        userEmail: email, // Custom field name
-        organisation_id: result.organisation_id, // Custom field name
-      },
-    });
+    // const clerk = clerkClient();
+    // await clerk.users.updateUser(userId as string, {
+    //   publicMetadata: {
+    //     first_name: firstNameClerk, // Custom field name
+    //     last_name_clerk: lastNameClerk, // Custom field name
+    //     userEmail: email, // Custom field name
+    //     organisation_id: result.organisation_id, // Custom field name
+    //   },
+    // });
 
     return NextResponse.json(result);
   } catch (error) {
