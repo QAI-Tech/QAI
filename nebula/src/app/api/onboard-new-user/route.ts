@@ -6,7 +6,6 @@ import {
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import { constructUrl } from "@/lib/urlUtlis";
 import { NextRequest, NextResponse } from "next/server";
-import { auth, clerkClient } from "@clerk/nextjs/server";
 import * as Sentry from "@sentry/nextjs";
 
 // Define proper types for the request body
@@ -114,22 +113,6 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await backendResponse.json();
-
-    // Update clerk user metadata with the new details
-    const { userId } = auth();
-    if (userId) {
-      await clerkClient.users.updateUser(userId, {
-        publicMetadata: {
-          first_name: firstName,
-          last_name_clerk: lastName,
-          userEmail: email,
-          organisation_id:
-            result.organisation?.organisation_id || effectiveOrgId,
-          roles: roles || ["Tester"],
-          invite_org_id: "",
-        },
-      });
-    }
 
     console.log("User onboarded successfully:", result);
     return NextResponse.json(result);

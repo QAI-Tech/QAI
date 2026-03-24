@@ -222,11 +222,7 @@ class Constants:
         else "graph-editor"
     )
 
-    GRAPH_COLLAB_API_URL = (
-        "https://graphcollab-prod.qaitech.ai"
-        if config.environment == Config.PRODUCTION
-        else "http://127.0.0.1:8001"
-    )
+    GRAPH_COLLAB_API_URL = "http://localhost:8001"
 
     # Request status
     REQUEST_QUEUED = "QUEUED"

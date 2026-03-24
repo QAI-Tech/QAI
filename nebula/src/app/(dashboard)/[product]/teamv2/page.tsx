@@ -45,10 +45,10 @@ export default function TeamPageV2() {
     if (userOrgId) {
       dispatch(fetchUsers(userOrgId));
     }
-  }, [dispatch, userOrgId]);
+  }, [dispatch, userOrgId]);  
 
   const currentUser = users.find(
-    (u) => u.email === user?.primaryEmailAddress?.emailAddress,
+    (u) => u.email === user?.primaryEmailAddress,
   );
   const currentUserRole = currentUser?.roles?.[0] ?? UserRole.TESTER;
 

@@ -11,7 +11,7 @@ export const GCS_SIGNED_URL_EXPIRATION_MS = 60 * 60 * 1000;
 export const FILENAME_FOR_DOWNLOAD_TEST_CASES_IN_EXCEL = "test_cases.xlsx";
 export const DEVELOPMENT_API_URL = "http://127.0.0.1:8080";
 export const PRODUCTION_API_URL =
-  "https://europe-west3-qai-tech.cloudfunctions.net";
+  "http://127.0.0.1:8080";
 export const VIDEO_FILES_KEY = "videos";
 export type MEDIA_TYPE = "VIDEO" | "SCREENSHOT";
 export const VIDEO: MEDIA_TYPE = "VIDEO";
@@ -130,7 +130,7 @@ export const SERVER_IP_MAP: Record<string, string> = {
 
 export const GRAPH_COLLABORATION_SERVER_URL =
   process.env.NEXT_PUBLIC_APP_ENV === "production"
-    ? "https://graphcollab-prod.qaitech.ai"
+    ? "http://127.0.0.1:8001"
     : "http://127.0.0.1:8001";
 
 export const BROWSER_DROID_SERVER_URLS = [
