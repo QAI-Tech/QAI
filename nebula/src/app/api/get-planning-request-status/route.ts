@@ -4,6 +4,8 @@ import { SESSION_TOKEN_COOKIE_NAME } from "@/lib/constants";
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import * as Sentry from "@sentry/nextjs";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;

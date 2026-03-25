@@ -9,9 +9,10 @@ export const PRODUCT_DESIGN_ASSETS_BUCKET_NAME =
 export const GCS_BUCKET_NAME_FOR_TEST_CASES_DOWNLOAD = "test_cases_excel";
 export const GCS_SIGNED_URL_EXPIRATION_MS = 60 * 60 * 1000;
 export const FILENAME_FOR_DOWNLOAD_TEST_CASES_IN_EXCEL = "test_cases.xlsx";
-export const DEVELOPMENT_API_URL = "http://127.0.0.1:8080";
+export const DEVELOPMENT_API_URL =
+  process.env.NEXT_PUBLIC_ORIONIS_URL || "http://orionis:8080";
 export const PRODUCTION_API_URL =
-  "http://127.0.0.1:8080";
+  process.env.NEXT_PUBLIC_ORIONIS_URL || "http://orionis:8080";
 export const VIDEO_FILES_KEY = "videos";
 export type MEDIA_TYPE = "VIDEO" | "SCREENSHOT";
 export const VIDEO: MEDIA_TYPE = "VIDEO";

@@ -11,6 +11,8 @@ import {
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import { constructUrl } from "@/lib/urlUtlis";
 
+export const dynamic = 'force-dynamic';
+
 const isLocalStorageBackend =
   (process.env.STORAGE_BACKEND || "").toLowerCase() === "local" ||
   process.env.NEXT_PUBLIC_APP_ENV === "development";
