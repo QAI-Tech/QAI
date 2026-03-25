@@ -9,6 +9,8 @@ import {
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import { constructUrl } from "@/lib/urlUtlis";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

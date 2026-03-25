@@ -13,7 +13,7 @@ import { useBackend } from "@/hooks/use-backend";
 import Loading from "@/components/global/loading";
 // import { useRouter } from "next/navigation";
 import { useProductSwitcher } from "@/providers/product-provider";
-import { convertGcsUriToUrl, cn, ValidationHelpers } from "@/lib/utils";
+import { cn, ValidationHelpers } from "@/lib/utils";
 import { useUser } from "@clerk/nextjs";
 import { isQaiOrgUser, isQaiOrgAnalystUser } from "@/lib/constants";
 import * as Sentry from "@sentry/nextjs";

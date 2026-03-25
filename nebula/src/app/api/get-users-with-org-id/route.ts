@@ -9,6 +9,8 @@ import {
   HTTP_STATUS_OK,
 } from "@/lib/constants";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

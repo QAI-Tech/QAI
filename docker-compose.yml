@@ -43,6 +43,8 @@ services:
       - .env.example
     environment:
       - NEXT_PUBLIC_APP_ENV=development
+      - PORT=3000
+    command: ["npm", "run", "start", "--", "--port", "3000"]
     restart: unless-stopped
 
   # # ─── Pulsar Browser-Droid ─────────────────────────────────

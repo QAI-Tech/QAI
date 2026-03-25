@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 
+export const dynamic = 'force-dynamic';
+
 function getStorageRoot(): string {
   const configured = process.env.STORAGE_LOCAL_ROOT;
   if (configured) {

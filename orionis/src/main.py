@@ -65,7 +65,6 @@ from test_runs.test_run_request_validator import TestRunRequestValidator
 from users.user_datastore import UserDatastore
 from users.user_request_validator import UserRequestValidator
 from utils.util import orionis_log
-from api_gateway import TokenValidator
 import jwt
 from services.user_authentication.auth_handler import AuthHandler
 from common.google_cloud_wrappers import GCPDatastoreWrapper, GCPFileStorageWrapper
@@ -107,7 +106,6 @@ db_client_instance = GCPDatastoreWrapper()
 user_service = UserService(UserRequestValidator(), UserDatastore())
 bucket_instance = GCPFileStorageWrapper()
 auth_handler = AuthHandler()
-token_validator = TokenValidator()
 file_storage_client = GCPFileStorageWrapper()
 db = GCPDatastoreWrapper().get_datastore_client()
 bucket = file_storage_client.get_bucket()
@@ -276,7 +274,6 @@ translation_verifier = TranslationsVerifier(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_products(request: flask.Request) -> flask.typing.ResponseReturnValue:
     if request.method == "POST":
         try:
@@ -302,7 +299,6 @@ def get_products(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_organizations_for_qai_user(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -325,7 +321,6 @@ def get_organizations_for_qai_user(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_test_cases_for_product(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -371,7 +366,6 @@ def get_test_cases_for_product(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_test_cases_for_request(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -413,7 +407,6 @@ def get_test_cases_for_request(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def copy_test_cases_for_product(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -509,7 +502,6 @@ def signin(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_product(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
 
@@ -519,7 +511,6 @@ def add_product(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_product(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
 
@@ -529,7 +520,6 @@ def update_product(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_product(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
 
@@ -539,7 +529,6 @@ def delete_product(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_test_case(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
 
@@ -548,7 +537,6 @@ def update_test_case(request: flask.Request) -> flask.typing.ResponseReturnValue
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_test_case(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = test_case_service.delete_test_cases(request_entity)
@@ -556,7 +544,6 @@ def delete_test_case(request: flask.Request) -> flask.typing.ResponseReturnValue
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_test_case(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = test_case_service.add_test_case(request_entity, flask.g.user_id)
@@ -564,7 +551,6 @@ def add_test_case(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_test_run(request: flask.Request) -> flask.typing.ResponseReturnValue:
     user_id = flask.g.user_id
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
@@ -574,7 +560,6 @@ def add_test_run(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_test_run_from_flows(request: flask.Request) -> flask.typing.ResponseReturnValue:
     user_id = flask.g.user_id
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
@@ -584,7 +569,6 @@ def add_test_run_from_flows(request: flask.Request) -> flask.typing.ResponseRetu
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_test_runs_for_product(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -597,7 +581,6 @@ def get_test_runs_for_product(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_new_test_cases_to_test_run(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -608,7 +591,6 @@ def add_new_test_cases_to_test_run(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_test_case_under_execution(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -621,7 +603,6 @@ def update_test_case_under_execution(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def request_smoke_test_planning(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -634,7 +615,6 @@ def request_smoke_test_planning(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def request_kg_test_case_planning(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -658,7 +638,6 @@ def process_smoke_test_planning(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def request_maintainer_agent(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -685,7 +664,6 @@ def process_maintainer_agent(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def merge_generated_graph(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -704,7 +682,6 @@ def merge_generated_graph(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_test_case_planning_requests_by_product_id(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -720,7 +697,6 @@ def get_test_case_planning_requests_by_product_id(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_planning_request_status(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -744,7 +720,6 @@ def user_goal_planning_handler(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_features_using_product_id(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -757,7 +732,6 @@ def get_features_using_product_id(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_feature(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -768,7 +742,6 @@ def add_feature(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_feature(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -779,7 +752,6 @@ def delete_feature(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_test_cases_under_execution(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -794,7 +766,6 @@ def get_test_cases_under_execution(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_user_details(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = user_service.update_user(request_entity, flask.g.user_id)
@@ -803,7 +774,6 @@ def update_user_details(request: flask.Request) -> flask.typing.ResponseReturnVa
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_org(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = org_service.add_organisation(request_entity, flask.g.user_id)
@@ -812,7 +782,6 @@ def add_org(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def onboard_new_user(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = onboarding_service.onboard_new_user(
@@ -823,7 +792,6 @@ def onboard_new_user(request: flask.Request) -> flask.typing.ResponseReturnValue
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def reordering_features(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -833,7 +801,6 @@ def reordering_features(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def reordering_test_cases(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -854,7 +821,6 @@ def update_execution_data(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_users_with_org_id(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -867,7 +833,6 @@ def get_users_with_org_id(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_test_case_under_execution_from_test_run(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -880,7 +845,6 @@ def delete_test_case_under_execution_from_test_run(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_credentials_to_test_case_or_product(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -892,7 +856,6 @@ def add_credentials_to_test_case_or_product(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_credentials(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(
         data=request.args.to_dict(), method=request.method
@@ -902,7 +865,6 @@ def get_credentials(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_credentials(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -912,7 +874,6 @@ def update_credentials(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_credentials(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = credentials_service.delete_credentials(request_entity)
@@ -920,7 +881,6 @@ def delete_credentials(request: flask.Request) -> flask.typing.ResponseReturnVal
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_jira_credentials(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -930,7 +890,6 @@ def add_jira_credentials(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_jira_credentials(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -940,7 +899,6 @@ def delete_jira_credentials(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_jira_credentials(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -952,7 +910,6 @@ def get_jira_credentials(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def create_jira_tickets_for_failed_tests(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -964,7 +921,6 @@ def create_jira_tickets_for_failed_tests(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_feature(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = feature_service.update_feature(request_entity)
@@ -972,7 +928,6 @@ def update_feature(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_usage_data_for_organisation(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -987,7 +942,6 @@ def get_usage_data_for_organisation(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_user_role(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = user_service.update_user_role(request_entity)
@@ -995,7 +949,6 @@ def update_user_role(request: flask.Request) -> flask.typing.ResponseReturnValue
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_user(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = user_service.delete_user(request_entity, flask.g.user_id)
@@ -1003,7 +956,6 @@ def delete_user(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def send_email_invites(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = user_service.send_email_invites(request_entity, flask.g.user_id)
@@ -1011,7 +963,6 @@ def send_email_invites(request: flask.Request) -> flask.typing.ResponseReturnVal
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def copy_test_case_under_execution_for_product(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1136,7 +1087,6 @@ def update_mirrored_test_cases(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def send_test_run_email(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1147,7 +1097,6 @@ def send_test_run_email(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def batched_signed_url(request: flask.Request) -> flask.typing.ResponseReturnValue:
     """
     Expects JSON POST: { "urls": ["https://storage.googleapis.com/bucket/file.png", ...] }
@@ -1160,7 +1109,6 @@ def batched_signed_url(request: flask.Request) -> flask.typing.ResponseReturnVal
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def trigger_api_request(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = util_service.trigger_api_request(request_entity)
@@ -1169,7 +1117,6 @@ def trigger_api_request(request: flask.Request) -> flask.typing.ResponseReturnVa
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def assign_tcue_to_users(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1180,7 +1127,6 @@ def assign_tcue_to_users(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def create_test_suite(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = test_suite_service.create_test_suite(request_entity)
@@ -1189,7 +1135,6 @@ def create_test_suite(request: flask.Request) -> flask.typing.ResponseReturnValu
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def get_test_suites(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(
         data=request.args.to_dict(), method=request.method
@@ -1200,7 +1145,6 @@ def get_test_suites(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_test_suite(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = test_suite_service.update_test_suite(request_entity)
@@ -1209,7 +1153,6 @@ def update_test_suite(request: flask.Request) -> flask.typing.ResponseReturnValu
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def delete_test_suite(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = test_suite_service.delete_test_suite(request_entity)
@@ -1218,7 +1161,6 @@ def delete_test_suite(request: flask.Request) -> flask.typing.ResponseReturnValu
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def save_graph(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = diff_service.save_graph_to_bucket(request_entity)
@@ -1227,7 +1169,6 @@ def save_graph(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def title_generation_for_nodes(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1238,7 +1179,6 @@ def title_generation_for_nodes(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def sync_tcue_in_test_run(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = test_case_execution_service.sync_tcue_in_test_run(request_entity)
@@ -1247,7 +1187,6 @@ def sync_tcue_in_test_run(request: flask.Request) -> flask.typing.ResponseReturn
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def call_llm(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1258,7 +1197,6 @@ def call_llm(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def format_edge_description(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1269,7 +1207,6 @@ def format_edge_description(
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def add_flows_to_existing_test_run(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
@@ -1290,7 +1227,6 @@ def buy_qubits(request: flask.Request) -> flask.typing.ResponseReturnValue:
 
 
 @functions_framework.http
-@token_validator.validate_session_token
 def update_organisation(request: flask.Request) -> flask.typing.ResponseReturnValue:
     request_entity = ApiRequestEntity(data=request.get_json(), method=request.method)
     response_entity = org_service.update_organisation(request_entity)

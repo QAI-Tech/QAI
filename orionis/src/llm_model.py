@@ -25,10 +25,14 @@ class LLMModelWrapper:
             os.getenv("ORIONIS_MAX_INLINE_VIDEO_BYTES", "450000000")
         )
 
-        # Initialize Vertex AI
-        vertexai.init(project=config.gcp_project_id)
-        self.client_v2 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V2)
-        self.client_v3 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V3)
+        # Initialize Vertex AI only if not in local storage mode
+        if not self._is_local_storage_mode:
+            vertexai.init(project=config.gcp_project_id)
+            self.client_v2 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V2)
+            self.client_v3 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V3)
+        else:
+            self.client_v2 = None
+            self.client_v3 = None
 
     @staticmethod
     def _get_qai_root() -> Path:
