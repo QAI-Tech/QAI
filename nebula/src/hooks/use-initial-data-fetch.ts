@@ -17,6 +17,8 @@ export default function useInitialDataFetch() {
   const { user } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const isLocalMode = process.env.NEXT_PUBLIC_APP_ENV === "development";
+  const isMockAuthUser = user?.id === "dummy-user-123";
 
   const organisationId = user?.publicMetadata?.organisation_id as
     | string
@@ -27,7 +29,17 @@ export default function useInitialDataFetch() {
     organisationId !== "";
 
   useEffect(() => {
+    console.log("[useInitialDataFetch] bootstrap check", {
+      userId: user?.id,
+      organisationId,
+      isValidOrganisationId,
+      isLocalMode,
+      isMockAuthUser,
+      pathname,
+    });
+
     if (!isValidOrganisationId) {
+      console.log("[useInitialDataFetch] skipping fetch due to invalid organisation id");
       return;
     }
 
@@ -42,8 +54,22 @@ export default function useInitialDataFetch() {
           fetchProducts(organisationId as string),
         ).unwrap();
 
+        console.log("[useInitialDataFetch] fetched products", {
+          count: Array.isArray(productList) ? productList.length : -1,
+          isLocalMode,
+          isMockAuthUser,
+          organisationId,
+        });
+
         if (!productList || productList.length === 0) {
-          router.push("/onboarding?step=3");
+          if (!isLocalMode && !isMockAuthUser) {
+            console.log("[useInitialDataFetch] redirecting to onboarding step 3");
+            router.push("/onboarding?step=3");
+          } else {
+            console.log(
+              "[useInitialDataFetch] empty products but skipping onboarding redirect due to local/mock mode",
+            );
+          }
           return;
         }
 
@@ -98,5 +124,7 @@ export default function useInitialDataFetch() {
     router,
     setProductSwitcher,
     isValidOrganisationId,
+    isLocalMode,
+    isMockAuthUser,
   ]);
 }

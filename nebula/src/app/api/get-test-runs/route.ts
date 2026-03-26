@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
       `${constructUrl("GetTestRunsForProduct")}?product_id=${product_id}`,
       {
         method: "GET",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           Authorization: `${req.cookies.get(SESSION_TOKEN_COOKIE_NAME)?.value}`,

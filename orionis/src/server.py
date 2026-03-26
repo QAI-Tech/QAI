@@ -1,8 +1,53 @@
 import flask
 import main
 import logging
+import os
+from api_gateway import TokenValidator
 
 app = flask.Flask(__name__)
+
+token_validator = TokenValidator()
+LOCAL_FALLBACK_USER_ID = os.getenv("ORIONIS_LOCAL_USER_ID", "123")
+
+
+def _local_user_id(value: str | None) -> str:
+    """Return a numeric user id for local-mode flows."""
+    candidate = (value or "").strip()
+    if candidate.isdigit():
+        return candidate
+    return LOCAL_FALLBACK_USER_ID
+
+
+@app.before_request
+def validate_token():
+    """Validate authorization token and set flask.g.user_id"""
+    is_local_storage_mode = (
+        os.getenv("STORAGE_BACKEND", os.getenv("ORIONIS_BACKEND", "")).lower()
+        == "local"
+    )
+
+    token = (flask.request.headers.get("Authorization") or "").strip()
+    token_is_invalid_literal = token.lower() in {"", "undefined", "null", "none"}
+
+    if token and not token_is_invalid_literal:
+        try:
+            user_id = token_validator.auth_handler.validate_session_token(token)
+            if user_id:
+                if is_local_storage_mode:
+                    flask.g.user_id = _local_user_id(user_id)
+                else:
+                    flask.g.user_id = user_id
+        except Exception as e:
+            logging.error(f"Token validation error: {e}")
+            if is_local_storage_mode:
+                flask.g.user_id = _local_user_id(None)
+            else:
+                flask.g.user_id = None
+    else:
+        if is_local_storage_mode:
+            flask.g.user_id = _local_user_id(None)
+        else:
+            flask.g.user_id = None
 
 
 # Basic CORS support

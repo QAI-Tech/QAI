@@ -28,7 +28,7 @@ export const useAuth = () => ({
     isSignedIn: true,
     userId: dummyUser.id,
     sessionId: "dummy-session-123",
-    getToken: async () => "dummy-token",
+    getToken: async () => `debug_token:${dummyUser.id}`,
 });
 
 export const useClerk = () => ({
@@ -51,7 +51,7 @@ export const SignUpButton = ({ children }: { children?: React.ReactNode;[key: st
 export const auth = () => ({
     userId: dummyUser.id,
     sessionId: "dummy-session-123",
-    getToken: async () => "dummy-token",
+    getToken: async () => `debug_token:${dummyUser.id}`,
     redirectToSignIn: () => null,
 });
 

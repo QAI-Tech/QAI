@@ -3,6 +3,7 @@ import sentry_sdk
 from config import config
 import functions_framework
 import logging
+import os
 
 from credentials.credentials_datastore import CredentialsDatastore
 from credentials.credentials_request_validator import CredentialsRequestValidator
@@ -303,13 +304,34 @@ def get_organizations_for_qai_user(
     request: flask.Request,
 ) -> flask.typing.ResponseReturnValue:
     if request.method == "GET":
-        # Get the user ID from token validation
-        user_id = flask.g.user_id
+        is_local_storage_mode = (
+            os.getenv("STORAGE_BACKEND", os.getenv("ORIONIS_BACKEND", "")).lower()
+            == "local"
+        )
+        user_id = getattr(flask.g, "user_id", None)
 
-        user = user_service.get_user(user_id)
-        organisation_id = user.organisation_id
+        if not user_id:
+            if is_local_storage_mode:
+                response_entity = org_service.get_all_organisations("", "")
+                return flask.jsonify(response_entity.response), response_entity.status_code
 
-        # Get all organizations
+            return (
+                flask.jsonify({"error": "Unauthorized: missing authenticated user"}),
+                Constants.HTTP_STATUS_UNAUTHORIZED,
+            )
+
+        try:
+            user = user_service.get_user(user_id)
+            organisation_id = user.organisation_id
+        except Exception as e:
+            if is_local_storage_mode:
+                orionis_log(
+                    f"Falling back to local org listing due to user lookup error for user_id={user_id}: {e}"
+                )
+                response_entity = org_service.get_all_organisations("", "")
+                return flask.jsonify(response_entity.response), response_entity.status_code
+            raise
+
         response_entity = org_service.get_all_organisations(user_id, organisation_id)
 
         return flask.jsonify(response_entity.response), response_entity.status_code
