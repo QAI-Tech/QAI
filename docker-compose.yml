@@ -44,6 +44,9 @@ services:
     environment:
       - NEXT_PUBLIC_APP_ENV=development
       - PORT=3000
+    volumes:
+      - qai-storage:/app/.qai
+    user: "0:0"
     command: ["npm", "run", "start", "--", "--port", "3000"]
     restart: unless-stopped
 

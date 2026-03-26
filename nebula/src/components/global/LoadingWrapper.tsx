@@ -18,6 +18,8 @@ export default function LoadingWrapper({
   const { isLoaded, isSignedIn, user } = useUser();
   const { isAppLoading, setAppLoading } = useLoading();
   const productsState = useSelector((state: RootState) => state.products);
+  const isLocalMode = process.env.NEXT_PUBLIC_APP_ENV === "development";
+  const isMockAuthUser = user?.id === "dummy-user-123";
 
   // Special paths that should always be rendered without loading screens
   const isOnboardingPath = pathname.startsWith("/onboarding");
@@ -31,14 +33,31 @@ export default function LoadingWrapper({
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
       const organisationId = user?.publicMetadata?.organisation_id;
+      console.log("[LoadingWrapper] org redirect check", {
+        pathname,
+        userId: user?.id,
+        organisationId,
+        isOnboardingPath,
+        isLocalMode,
+        isMockAuthUser,
+      });
 
       // If there's no organisation ID and we're not already on the onboarding path then redirect to onboarding
-      if (!organisationId && !isOnboardingPath) {
-        console.log("No organisation ID found, redirecting to onboarding");
+      if (!organisationId && !isOnboardingPath && !isLocalMode && !isMockAuthUser) {
+        console.log("[LoadingWrapper] redirecting to onboarding step 1");
         router.push("/onboarding?step=1");
       }
     }
-  }, [isLoaded, isSignedIn, user, router, isOnboardingPath]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    user,
+    router,
+    isOnboardingPath,
+    pathname,
+    isLocalMode,
+    isMockAuthUser,
+  ]);
 
   // Update application loading state
   useEffect(() => {

@@ -101,6 +101,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const QAI_DOMAINS = [
         "app.qaitech.ai",
         "nebula-236141506463.europe-west3.run.app",
+        "localhost:3000",
       ];
 
       const PUBLIC_AUTH_ROUTES = [
