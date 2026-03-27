@@ -71,6 +71,19 @@ services:
     ports:
       - "6379:6379"
     command: redis-server --appendonly no
+  # ─── Nova Web Listener (Pub/Sub → Web Execution) ────────
+  nova-web:
+    build:
+      context: .
+      dockerfile: ./nova/Dockerfile
+    container_name: qai-nova-web
+    command: ["python", "listener_web.py"]
+    env_file:
+      - .env.example
+    volumes:
+      - ./nova:/app                  # hot-reload in dev
+      - ./orionis/src:/orionis-src   # nova imports from orionis
+      - qai-storage:/app/.qai       # shared local storage
     restart: unless-stopped
 
 volumes:
