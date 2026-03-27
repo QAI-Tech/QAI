@@ -30,6 +30,9 @@ class Config:
     enable_new_video_to_flow: bool = False
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    redis_host: str = "qai-redis"
+    redis_port: int = 6379
+    pubsub_backend: str = "redis"
 
     _instance: Optional[Config] = None
 
@@ -103,6 +106,9 @@ class Config:
                 stripe_webhook_secret=os.getenv(
                     f"STRIPE_WEBHOOK_SECRET{env_suffix}", ""
                 ),
+                redis_host=os.getenv("REDIS_HOST", "qai-redis"),
+                redis_port=int(os.getenv("REDIS_PORT", "6379")),
+                pubsub_backend=os.getenv("PUBSUB_BACKEND", "redis").lower(),
             )
         return cls._instance
 
