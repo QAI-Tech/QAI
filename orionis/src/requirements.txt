@@ -31,6 +31,7 @@ pytest
 python-socketio
 google-cloud-aiplatform
 google-cloud-pubsub
+redis
 sentry-sdk
 google-play-scraper
 itunespy
