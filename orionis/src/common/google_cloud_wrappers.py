@@ -17,11 +17,25 @@ from common.sqlite_datastore import SQLiteDatastoreClient
 
 
 def _get_qai_root() -> Path:
+    env_root = os.getenv("STORAGE_SHARED_STATE_ROOT", os.getenv("ORIONIS_SHARED_STATE_ROOT"))
+    if env_root:
+        return Path(env_root).expanduser()
+
     current = Path(__file__).resolve()
+
+    for parent in current.parents:
+        if (parent / ".qai").exists():
+            return parent
+
     for parent in current.parents:
         if (parent / "orionis").exists() and (parent / "pulsar").exists():
             return parent
-    return current.parents[2]
+
+    for parent in current.parents:
+        if (parent / "server.py").exists() and (parent / "main.py").exists():
+            return parent
+
+    return current.parents[1]
 
 
 def _get_shared_state_root() -> Path:
@@ -40,6 +54,7 @@ class GCPDatastoreWrapper:
                 "STORAGE_SQLITE_DB_PATH",
                 os.getenv("ORIONIS_SQLITE_DB_PATH", str(default_sqlite_path))
             )
+            orionis_log(f"Using SQLite datastore path: {sqlite_db_path}")
             self.client = SQLiteDatastoreClient(sqlite_db_path=sqlite_db_path)
         else:
             self.client = datastore.Client()
@@ -62,6 +77,7 @@ class GCPFileStorageWrapper:
                 "STORAGE_LOCAL_ROOT",
                 os.getenv("ORIONIS_LOCAL_STORAGE_ROOT", str(default_storage_root)),
             )
+            orionis_log(f"Using local file storage root: {local_storage_root}")
             self._local_storage = LocalFileStorageWrapper(
                 root_directory=local_storage_root,
                 env_prefix=self.env_prefix,

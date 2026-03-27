@@ -19,7 +19,16 @@ def _get_qai_root() -> Path:
     for parent in current.parents:
         if (parent / "orionis").exists() and (parent / "pulsar").exists():
             return parent
-    return current.parents[3]
+
+    app_root = Path("/app")
+    if app_root.exists() and (app_root / ".qai").exists():
+        return app_root
+
+    try:
+        return current.parents[3]
+    except IndexError:
+
+        return current.parent
 
 # Directory paths
 LOGS_DIR = "logs"

@@ -10,6 +10,8 @@ import {
 } from "@/lib/constants";
 import * as Sentry from "@sentry/nextjs";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Extract query parameters

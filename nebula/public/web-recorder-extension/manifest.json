@@ -32,7 +32,8 @@
     {
       "matches": [
         "https://app.qaitech.ai/*",
-        "https://nebula-236141506463.europe-west3.run.app/*"
+        "https://nebula-236141506463.europe-west3.run.app/*",
+        "http://localhost:3000/*"
       ],
       "js": ["graph-editor-bridge.js"],
       "run_at": "document_end"

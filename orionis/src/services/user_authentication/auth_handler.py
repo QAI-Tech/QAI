@@ -122,6 +122,7 @@ class AuthHandler:
     def validate_session_token(self, token: str) -> str:
         if token.startswith("debug_token:"):
             return token.split(":", 1)[1]
+        orionis_log(f"Validating session token: {token}")
 
         try:
             data_b64, signature = token.rsplit(":", 1)
@@ -139,6 +140,7 @@ class AuthHandler:
                 )
 
             user_id, timestamp = data.split(":")
+            orionis_log(f"Token data - user_id: {user_id}, timestamp: {timestamp}")
             token_age = time.time() - int(timestamp)
 
             if token_age > Constants.TOKEN_EXP_TIME_SECONDS:

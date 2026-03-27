@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 
+export const dynamic = 'force-dynamic';
+
 function getStorageRoot(): string {
-  const configured = process.env.STORAGE_LOCAL_ROOT;
+  const configured =
+    process.env.STORAGE_LOCAL_ROOT || process.env.ORIONIS_LOCAL_STORAGE_ROOT;
   if (configured) {
     return path.isAbsolute(configured)
       ? configured
       : path.resolve(process.cwd(), configured);
+  }
+
+  if (process.cwd() === "/app") {
+    return "/app/.qai/storage";
   }
 
   return path.resolve(process.cwd(), "../.qai/storage");

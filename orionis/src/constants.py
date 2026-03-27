@@ -222,7 +222,9 @@ class Constants:
         else "graph-editor"
     )
 
-    GRAPH_COLLAB_API_URL = "http://localhost:8001"
+    GRAPH_COLLAB_API_URL = os.environ.get(
+        "GRAPH_COLLAB_API_URL", "http://localhost:8001"
+    )
 
     # Request status
     REQUEST_QUEUED = "QUEUED"

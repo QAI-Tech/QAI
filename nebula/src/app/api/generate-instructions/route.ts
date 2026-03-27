@@ -11,6 +11,8 @@ import {
 import { handleExpiredSessionToken } from "@/lib/handleExpiredSessionToken";
 import { constructUrl } from "@/lib/urlUtlis";
 
+export const dynamic = 'force-dynamic';
+
 const isLocalStorageBackend =
   (process.env.STORAGE_BACKEND || "").toLowerCase() === "local" ||
   process.env.NEXT_PUBLIC_APP_ENV === "development";
@@ -124,7 +126,8 @@ async function handleLocalSignedUrlRequest(
     );
   }
 
-  const objectPath = normalizeObjectName(String(fileName));
+  const folderName = "qai-upload-temporary";
+  const objectPath = `${folderName}/${fileName}`;
   const uploadId = uuidv4();
 
   const signedUrl = `${req.nextUrl.origin}/api/local-storage-upload?bucketName=${encodeURIComponent(

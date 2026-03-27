@@ -4,6 +4,7 @@
 const GRAPH_EDITOR_URLS = [
   "https://app.qaitech.ai/*",
   "https://nebula-236141506463.europe-west3.run.app/*",
+  "http://localhost:3000/*",
 ];
 
 async function ensureGraphEditorBridgeInjected(tabId) {

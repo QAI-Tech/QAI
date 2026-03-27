@@ -6,6 +6,8 @@ import {
   PRODUCT_DESIGN_ASSETS_BUCKET_NAME,
 } from "@/lib/constants";
 
+export const dynamic = 'force-dynamic';
+
 const isLocalStorageBackend =
   (process.env.STORAGE_BACKEND || "").toLowerCase() === "local" ||
   process.env.NEXT_PUBLIC_APP_ENV === "development";
