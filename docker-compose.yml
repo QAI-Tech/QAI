@@ -59,7 +59,14 @@ services:
   #     - ./pulsar/browser-droid:/app  # hot-reload in dev
   #   restart: unless-stopped
 
- 
+  # ─── Redis (Message Queue for Local Dev) ──────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: qai-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly no
+    restart: unless-stopped
 
 volumes:
   qai-storage:

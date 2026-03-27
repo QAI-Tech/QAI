@@ -1,4 +1,5 @@
 google-cloud-pubsub
+redis
 opencv-python
 scikit-image
 pyautogui

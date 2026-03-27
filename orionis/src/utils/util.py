@@ -8,6 +8,7 @@ from pathlib import Path
 import traceback
 from google.cloud import pubsub_v1  # type: ignore
 from google.api_core import exceptions
+from utils.pubsub_wrapper import get_pubsub_client
 
 
 class CustomFormatter(logging.Formatter):
@@ -117,55 +118,34 @@ def serialize_nested_lists(elements):
 
 def publish_to_pubsub(data: dict, project_id: str, topic_id: str) -> str:
     """
-    Enhanced version with more debugging information
+    Publish message using Redis (local) or Google Pub/Sub (production).
+    
+    Args:
+        data: Dictionary to publish as JSON
+        project_id: GCP project ID (if empty/None, uses Redis)
+        topic_id: Topic/queue name
+    
+    Returns:
+        Message ID or acknowledgment string
     """
-    orionis_log(f"Project ID: {project_id}")
-    orionis_log(f"Topic ID: {topic_id}")
+    orionis_log(f"Publishing to topic/queue: {topic_id}")
+    orionis_log(f"Project ID: {project_id if project_id else '(using Redis)'}")
     orionis_log(f"Data: {data}")
 
-    publisher = None
     try:
-        # Create publisher client
-        publisher = pubsub_v1.PublisherClient()
-        topic_path = publisher.topic_path(project_id, topic_id)
-        orionis_log(f"Topic path: {topic_path}")
-
-        # Check if topic exists (optional, but helps with debugging)
-        try:
-            topic = publisher.get_topic(request={"topic": topic_path})
-            orionis_log(f"Topic exists: {topic.name}")
-        except exceptions.NotFound:
-            orionis_log(f"WARNING: Topic {topic_path} might not exist")
-        except Exception as e:
-            orionis_log(f"Could not verify topic existence: {e}", e)
-
-        # Prepare message
-        message_data = json.dumps(data, ensure_ascii=False).encode("utf-8")
-        orionis_log(f"Message size: {len(message_data)} bytes")
-
-        # Publish with attributes for better tracking
-        future = publisher.publish(
-            topic_path,
-            message_data,
-            # Add some attributes for debugging
-            source="python_publisher",
-        )
-
-        # Get the result
-        message_id = future.result(timeout=30)
+        # Get appropriate client based on PUBSUB_BACKEND env var
+        client = get_pubsub_client()
+        
+        # Publish message
+        message_id = client.publish(data=data, topic_id=topic_id)
+        
         orionis_log(f"SUCCESS: Message published with ID: {message_id}")
-        orionis_log("=== PUBLISH DEBUG END ===")
-
         return message_id
 
     except Exception as e:
-        orionis_log(f"ERROR in publish_to_pubsub_debug: {str(e)}", e)
+        orionis_log(f"ERROR in publish_to_pubsub: {str(e)}", e)
         orionis_log(f"Error type: {type(e)}")
         raise
-
-    finally:
-        if publisher:
-            publisher.transport.close()
 
 
 def should_call_vertexai() -> bool:
