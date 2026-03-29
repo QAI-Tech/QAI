@@ -4,24 +4,16 @@ import json, shutil, time, copy
 from tc_executor.master import main as executor_main
 from tc_generator.main import main as generator_main
 from tc_executor.constants import EMAIL_ID, PASSWORD, USERNAME, PROD_BUCKET_PREFIX, BUCKET_NAME, PRODUCTION_ENVIRONMENT
-import sentry_sdk
 from utils.create_executable_tcs import createExecutableTCs
 from utils.arg_parser import parseArgs
 from utils.utils import processFlowDir, printJudgement, logFinalState, saveVideoLocally, createNUploadVideo 
 from utils.adb_utils import adbKillApp, adbOpenApp, adbInstallApp
-from tc_executor.constants import SENTRY_DSN
 from monkey_run_main import monkey_main
 from goal_planner import goalPlannerMain
 from gcp_upload.google_cloud_wrappers import GCPFileStorageWrapper
 from utils.utils import nova_log, construct_bucket_name, storeKGSSs, fetchPreconFromKG
 
 import requests
-
-sentry_sdk.init(
-    dsn=SENTRY_DSN,
-    send_default_pii=True,
-    traces_sample_rate=1.0,
-)
 
 def installApp(args):
     try: # install an app

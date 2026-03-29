@@ -185,35 +185,7 @@ class TestCaseUnderExecutionService:
                     )
                     self.test_run_datastore.update_test_run(update_params)
 
-            if (
-                config.environment == Config.PRODUCTION
-                and updated_test_case_under_exec.comments
-                and update_test_case_params.comments
-                and updated_test_case_under_exec.comments
-                != update_test_case_params.comments
-            ):
-                comments = json.loads(updated_test_case_under_exec.comments)
-                comment = comments[0]["text"]
-                name = comments[0]["userName"]
-                self.notification_service.notify_slack(
-                    (
-                        f":memo: Test Case Under Execution Updated! :memo:\n\n"
-                        f"• Test Case Under Execution Id: `{update_test_case_params.test_case_under_execution_id}`\n"
-                        f"• Status: `{update_test_case_params.status}`\n"
-                        f"• Comment: `{comment}`\n"
-                        f"• Commented by: `{name}`\n"
-                        f"• TCUE Link: `"
-                        f"{Constants.DOMAIN}/"
-                        f"{updated_test_case_under_exec.product_id}/"
-                        f"test-runs?"
-                        f"featureId=&{updated_test_case_under_exec.feature_id or ''}&"
-                        f"showFlows=true&"
-                        f"testRunId={updated_test_case_under_exec.test_run_id}&"
-                        f"flow_id={updated_test_case_under_exec.flow_id}&"
-                        f"tcue={updated_test_case_under_exec.id}`\n"
-                    ),
-                    config.customer_comments_webhook_url,
-                )
+            # Customer Comments Webhook removed
 
             return ApiResponseEntity(
                 response={
@@ -522,25 +494,7 @@ class TestCaseUnderExecutionService:
                 str(update_nova_execution_data_params.product_id)
             )
 
-            if config.environment == Config.PRODUCTION:
-                self.notification_service.notify_slack(
-                    (
-                        f":wrench: Nova Execution Data Updated! :wrench:\n\n"
-                        f"• Product Name: `{product_details.product_name}`\n"
-                        f"• TCUE Ttitle: `{tcue.title}`\n"
-                        f"• Status: `{update_nova_execution_data_params.status}`\n"
-                        f"• TestRun Link: `"
-                        f"{Constants.DOMAIN}/"
-                        f"{update_nova_execution_data_params.product_id}/"
-                        "test-runs?"
-                        f"featureId={tcue.feature_id}"
-                        "&showFlows=true"
-                        f"&testRunId={update_nova_execution_data_params.test_run_id}"
-                        f"&flow_id={tcue.flow_id}`\n"
-                        f":rocket: Test case has been enriched with the latest execution insights!"
-                    ),
-                    config.test_run_update_webhook_url,
-                )
+            # Test Run Update Webhook Notification Removed
             return ApiResponseEntity(
                 response={
                     "message": f"Successfully processed execution data for tcue_id: {update_nova_execution_data_params.test_case_under_execution_id}",

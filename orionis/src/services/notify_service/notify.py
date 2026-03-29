@@ -29,31 +29,9 @@ class NotificationService:
         self.slack_webhook_url = config.notification_webhook_url
         self.user_service = UserService(UserRequestValidator(), UserDatastore())
         self.db = GCPDatastoreWrapper().get_datastore_client()
-        if not self.slack_webhook_url:
-            raise ValueError("Slack webhook URL must be provided.")
 
     def notify_slack(self, msg: str, webhook_url: str):
-
-        payload = {"text": msg}
-
-        try:
-            response = requests.post(
-                webhook_url,
-                data=json.dumps(payload),
-                headers={"Content-Type": "application/json"},
-            )
-            if response.status_code != Constants.HTTP_STATUS_OK:
-                logging.error(
-                    f"Request to Slack returned an error {response.status_code}, the response is:\n{response.text}"
-                )
-                raise RuntimeError(
-                    f"Slack API request failed with status {response.status_code}: {response.text}"
-                )
-            else:
-                logging.info("Notification sent to Slack successfully")
-        except Exception as e:
-            orionis_log(f"Failed to send notification to Slack: {e}", e)
-            raise
+        orionis_log(f"Slack Notification Bypass: {msg}")
 
     def send_notification(self, user_id, status, request_id, product_id):
         user = self.user_service.get_user(user_id)

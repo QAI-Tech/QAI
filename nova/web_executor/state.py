@@ -6,7 +6,7 @@ import os
 import json
 import time
 from typing import Optional
-from utils.utils import nova_log
+from utils.utils import nova_log, _trigger_update_execution_data
 
 
 class WebExecutionState:
@@ -136,3 +136,8 @@ class WebExecutionState:
                 nova_log("GCP upload completed successfully")
             except Exception as e:
                 nova_log(f"Failed to upload to GCP: {str(e)}", e)
+
+        # Trigger update explicitly because EventArc triggers have been neutered!
+        # Only trigger at the very end of executing the final step.
+        if self.state_id == 'final':
+            _trigger_update_execution_data(output_data)
