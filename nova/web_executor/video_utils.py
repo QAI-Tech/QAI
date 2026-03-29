@@ -67,14 +67,7 @@ def uploadWebExecutionVideo(video_src_path: str, args, bucket_name: str = 'nova_
     
     # Upload to GCP
     try:
-        nova_log(f"[VIDEO UPLOAD] Uploading to GCP...")
-        uploadVideoToGCP(
-            local_video_filepath=local_video_path,
-            bucket_name=bucket,
-            dest_video_filepath=gcp_video_url
-        )
-        nova_log(f"[VIDEO UPLOAD] ✅ Upload successful!")
-        nova_log(f"[VIDEO UPLOAD] Dashboard URL: gs://{bucket}/{gcp_video_url}")
+        nova_log(f"[NOVA-GCP-BYPASS] Skipping video upload to GCP for {local_video_path}")
     except Exception as e:
         error_msg = f"Failed to upload video to GCP: {str(e)}"
         nova_log(f"[ERROR] {error_msg}", e)
@@ -163,63 +156,7 @@ def uploadBlindRunArtifacts(blind_run_result: dict, args, bucket_name: str = 'no
         args: Arguments containing product_id, test_run_id, test_case_under_execution_id, environment
         bucket_name: GCP bucket name (default: 'nova_assets')
     """
-    from pathlib import Path
-    from gcp_upload.google_cloud_wrappers import GCPFileStorageWrapper
-
-    if not blind_run_result:
-        nova_log("[BLIND RUN UPLOAD] No blind run result to upload")
-        return
-
-    bucket = construct_bucket_name(bucket_name, args.environment)
-    gcp_prefix = f"{args.product_id}/{args.test_run_id}/{args.test_case_under_execution_id}"
-
-    nova_log(f"[BLIND RUN UPLOAD] Uploading blind run artifacts to gs://{bucket}/{gcp_prefix}/")
-
-    storage_wrapper = GCPFileStorageWrapper()
-    gcp_bucket = storage_wrapper.get_bucket(bucket)
-
-    uploaded = 0
-
-    # Upload blind_run_ss/ folder
-    ss_folder = blind_run_result.get("blind_run_ss_folder")
-    if ss_folder and os.path.isdir(ss_folder):
-        for filename in sorted(os.listdir(ss_folder)):
-            if filename.endswith('.png'):
-                local_path = os.path.join(ss_folder, filename)
-                remote_path = f"{gcp_prefix}/blind_run_ss/{filename}"
-                try:
-                    with open(local_path, 'rb') as f:
-                        blob = gcp_bucket.blob(remote_path)
-                        blob.upload_from_file(f, content_type='image/png')
-                    uploaded += 1
-                except Exception as e:
-                    nova_log(f"[BLIND RUN UPLOAD] Failed to upload {filename}: {e}")
-
-    # Upload blind_run_data.json
-    log_path = blind_run_result.get("blind_run_log")
-    if log_path and os.path.isfile(log_path):
-        remote_path = f"{gcp_prefix}/blind_run_data.json"
-        try:
-            with open(log_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            storage_wrapper.store_file(content, bucket, remote_path, 'application/json')
-            uploaded += 1
-        except Exception as e:
-            nova_log(f"[BLIND RUN UPLOAD] Failed to upload blind_run_data.json: {e}")
-
-    # Upload graph_blind.json
-    graph_path = blind_run_result.get("graph_blind")
-    if graph_path and os.path.isfile(graph_path):
-        remote_path = f"{gcp_prefix}/graph_blind.json"
-        try:
-            with open(graph_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            storage_wrapper.store_file(content, bucket, remote_path, 'application/json')
-            uploaded += 1
-        except Exception as e:
-            nova_log(f"[BLIND RUN UPLOAD] Failed to upload graph_blind.json: {e}")
-
-    nova_log(f"[BLIND RUN UPLOAD] Uploaded {uploaded} blind run artifacts to GCP")
+    nova_log(f"[NOVA-GCP-BYPASS] Skipping blind run artifacts upload to GCP")
 
 
 # Example usage in web_executor/main.py:

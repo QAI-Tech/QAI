@@ -11,13 +11,21 @@ _ORIONIS_SRC = _QAI_ROOT / "orionis" / "src"
 if str(_ORIONIS_SRC) not in sys.path:
     sys.path.insert(0, str(_ORIONIS_SRC))
 
-from common.google_cloud_wrappers import (  # type: ignore  # noqa: E402
-    GCPDatastoreWrapper as OrionisDatastoreWrapper,
-)
-from common.google_cloud_wrappers import (  # type: ignore  # noqa: E402
-    GCPFileStorageWrapper as OrionisFileStorageWrapper,
-)
-from config import Config, config  # type: ignore  # noqa: E402
+# Temporarily remove nova's 'utils' from sys.modules so orionis can load its own 'utils'
+_nova_utils = sys.modules.pop("utils", None)
+
+try:
+    from common.google_cloud_wrappers import (  # type: ignore  # noqa: E402
+        GCPDatastoreWrapper as OrionisDatastoreWrapper,
+    )
+    from common.google_cloud_wrappers import (  # type: ignore  # noqa: E402
+        GCPFileStorageWrapper as OrionisFileStorageWrapper,
+    )
+    from config import Config, config  # type: ignore  # noqa: E402
+finally:
+    # Restore nova's 'utils'
+    if _nova_utils is not None:
+        sys.modules["utils"] = _nova_utils
 
 
 class _LocalBlobShim:

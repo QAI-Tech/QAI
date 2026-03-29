@@ -1,3 +1,5 @@
+import os
+os.environ["GRPC_DNS_RESOLVER"] = "native"
 import time
 import logging
 from google.cloud import pubsub_v1

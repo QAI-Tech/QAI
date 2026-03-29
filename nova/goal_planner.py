@@ -3,12 +3,16 @@ from PIL import Image
 import logging
 
 logging.getLogger("PIL").setLevel(logging.WARNING)
-from vertexai.generative_models import GenerativeModel, GenerationConfig, Content, Part
 from io import BytesIO
 from utils.utils import nova_log
 import requests
+import google.generativeai as genai
+from tc_executor.constants import GOOGLE_API_KEY
+
+genai.configure(api_key=GOOGLE_API_KEY)
 GEMINI_MODEL_NAME = "gemini-2.5-flash"
-gemini_client = GenerativeModel(GEMINI_MODEL_NAME)
+gemini_client = genai.GenerativeModel(GEMINI_MODEL_NAME)
+GenerationConfig = genai.GenerationConfig
 
 
 def geminiMultiImageQuery(
@@ -30,7 +34,7 @@ def geminiMultiImageQuery(
             img_bytes_io = BytesIO()
             img.convert("RGB").save(img_bytes_io, format="JPEG")
             img_bytes = img_bytes_io.getvalue()
-            img_part = Part.from_data(data=img_bytes, mime_type="image/jpeg")
+            img_part = {"mime_type": "image/jpeg", "data": img_bytes}
             content.append(img_part)
 
     for i in range(retry):

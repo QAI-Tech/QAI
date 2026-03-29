@@ -1,11 +1,13 @@
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
+import google.generativeai as genai
 import sys, os, json, shutil
 from typing import List
 from pydantic import BaseModel
 import subprocess
 from datetime import datetime
 
-client_v3 = GenerativeModel('gemini-2.5-flash')
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY", ""))
+client_v3 = genai.GenerativeModel('gemini-2.5-flash')
+GenerationConfig = genai.GenerationConfig
 
 def serialize(elements):
     return json.dumps(
@@ -26,7 +28,7 @@ def call_llm_v3( prompt, video_urls, response_schema = {
                                         "type": "object",
                                         "properties": {"message": {"type": "string"}},
                                         "required": ["message"]}):
-    video_parts = [Part.from_uri(url_to_uri(url), mime_type="video/*") for url in video_urls]
+    video_parts = [{"file_data": {"mime_type": "video/*", "file_uri": url_to_uri(url)}} for url in video_urls]
     content = [prompt] + video_parts
 
     response = client_v3.generate_content(

@@ -1,4 +1,6 @@
-import os, json, shutil, time, copy
+import os
+os.environ["GRPC_DNS_RESOLVER"] = "native"
+import json, shutil, time, copy
 from tc_executor.master import main as executor_main
 from tc_generator.main import main as generator_main
 from tc_executor.constants import EMAIL_ID, PASSWORD, USERNAME, PROD_BUCKET_PREFIX, BUCKET_NAME, PRODUCTION_ENVIRONMENT

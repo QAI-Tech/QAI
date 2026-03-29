@@ -7,19 +7,17 @@ import anthropic
 import os, logging, sys, json
 import google.generativeai as genai
 from typing import List, Dict, Any
-from vertexai.generative_models import GenerativeModel, GenerationConfig, Content, Part
-import vertexai
 from io import BytesIO
 from tc_executor.constants import ANTHROPIC_API_KAY, ANTHROPIC_MODEL
-from tc_executor.constants import GOOGLE_API_KEY, GCP_PROJECT_ID, GEMINI_MODEL_NAME
+from tc_executor.constants import GOOGLE_API_KEY, GEMINI_MODEL_NAME
 
 """ ----- Anthropic Credentials ----- """
 anthropic_client = anthropic.Anthropic(api_key = ANTHROPIC_API_KAY)
 
 """ ----- Google Credentials ------ """
 genai.configure(api_key=GOOGLE_API_KEY)
-vertexai.init(project=GCP_PROJECT_ID)
-gemini_client = GenerativeModel(GEMINI_MODEL_NAME)
+gemini_client = genai.GenerativeModel(GEMINI_MODEL_NAME)
+GenerationConfig = genai.GenerationConfig
 
 def geminiTwoImageQuery(_ss1, _ss2, prompt,
                          response_schema={
@@ -36,14 +34,14 @@ def geminiTwoImageQuery(_ss1, _ss2, prompt,
     ss1 = _ss1.copy().convert('RGB')
     ss1.save(img1_bytes_io, format='JPEG')
     img1_bytes = img1_bytes_io.getvalue()
-    img1_part = Part.from_data(data=img1_bytes, mime_type="image/jpeg")
+    img1_part = {"mime_type": "image/jpeg", "data": img1_bytes}
 
     # Convert second image to bytes
     img2_bytes_io = BytesIO()
     ss2 = _ss2.copy().convert('RGB')
     ss2.save(img2_bytes_io, format='JPEG')
     img2_bytes = img2_bytes_io.getvalue()
-    img2_part = Part.from_data(data=img2_bytes, mime_type="image/jpeg")
+    img2_part = {"mime_type": "image/jpeg", "data": img2_bytes}
 
     # Content to be sent to Gemini
     content = [prompt, img1_part, img2_part]
@@ -84,7 +82,7 @@ def geminiSingleImageQuery( _ss, prompt,
     ss = _ss.copy().convert('RGB')
     ss.save(img_bytes, format='JPEG')
     img_bytes = img_bytes.getvalue()
-    img_part = Part.from_data(data=img_bytes, mime_type="image/jpeg")
+    img_part = {"mime_type": "image/jpeg", "data": img_bytes}
     content = [prompt, img_part]
 
     for i in range(retry):

@@ -1,16 +1,20 @@
 from typing import Dict, Any, List
 import instructor
 import google.generativeai as genai
+from google.generativeai.types import content_types
 import tenacity
-import vertexai
 import os
 import mimetypes
 from pathlib import Path
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig
 from constants import Constants
 from utils.util import orionis_log, url_to_uri  # type: ignore
 from config import config
 import base64
+
+# Alias genai classes to match the old vertexai names used throughout this file
+GenerativeModel = genai.GenerativeModel
+GenerationConfig = genai.GenerationConfig
+Part = genai.protos.Part
 
 
 class LLMModelWrapper:
@@ -25,14 +29,9 @@ class LLMModelWrapper:
             os.getenv("ORIONIS_MAX_INLINE_VIDEO_BYTES", "450000000")
         )
 
-        # Initialize Vertex AI only if not in local storage mode
-        if not self._is_local_storage_mode:
-            vertexai.init(project=config.gcp_project_id)
-            self.client_v2 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V2)
-            self.client_v3 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V3)
-        else:
-            self.client_v2 = None
-            self.client_v3 = None
+        # Use Gemini API key — no GCP project ID needed
+        self.client_v2 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V2)
+        self.client_v3 = GenerativeModel(Constants.GEMINI_MODEL_NAME_V3)
 
     @staticmethod
     def _get_qai_root() -> Path:
@@ -90,9 +89,9 @@ class LLMModelWrapper:
                             )
                         )
                 mime_type = mimetypes.guess_type(str(local_file))[0] or default_mime_type
-                return Part.from_data(data=local_file.read_bytes(), mime_type=mime_type)
+                return {"mime_type": mime_type, "data": local_file.read_bytes()}
 
-        return Part.from_uri(url_to_uri(url), mime_type=default_mime_type)
+        return {"file_data": {"mime_type": default_mime_type, "file_uri": url_to_uri(url)}}
 
     def _configure_client(self):
         return instructor.from_gemini(
@@ -193,7 +192,7 @@ class LLMModelWrapper:
                     mime_type = _detect_mime_from_bytes(image_bytes)
 
                 base64_parts.append(
-                    Part.from_data(data=image_bytes, mime_type=mime_type)
+                    {"mime_type": mime_type, "data": image_bytes}
                 )
             except Exception as e:
                 orionis_log(f"Failed to decode/process base64 image {i}:", e)

@@ -104,7 +104,6 @@ class NovaWebAgent:
                     use_thinking=True,
                     flash_mode=True,  # Gemini 2.0 Flash
                     is_anthropic=False,
-                    goal_driven_mode=True  # Enable goal-driven prompt template
                 )
             else:
                 nova_log("Using PRECONDITION MODE: Standard system prompt")

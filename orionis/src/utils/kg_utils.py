@@ -8,8 +8,11 @@ from pydantic import BaseModel
 def get_feature_id(features: List[Dict], start_node_id: str) -> str | None:
     """Get KG feature ID from start node ID."""
     for feature in features:
-        if start_node_id in feature["nodeIds"]:
-            return feature["id"]
+        if not isinstance(feature, dict):
+            continue
+        if start_node_id in feature.get("nodeIds", []):
+            # Use kg_feature_id if available, otherwise fall back to name
+            return feature.get("kg_feature_id") or feature.get("name")
 
     orionis_log(f"Node {start_node_id} not found in any feature")
     return None
@@ -37,7 +40,11 @@ def feature_processing(
     kg2db_feature_id_map: Dict[str, str] = {}
     orionis_log("Starting to process features")
     for feature in features:
-        kg_feature_id = feature["id"]
+        if not isinstance(feature, dict):
+            orionis_log(f"Skipping non-dict feature: {feature}")
+            continue
+        # Use kg_feature_id if available, otherwise fall back to name
+        kg_feature_id = feature.get("kg_feature_id") or feature.get("name")
         # Use the utility function for getting db_feature_id
         db_feature_id = get_db_feature_id(feature_datastore, kg_feature_id, product_id)
 

@@ -48,8 +48,16 @@ def convert_interactions_to_browser_prompt(
     prompt += "CREDENTIALS\n"
     prompt += "=" * 80 + "\n"
     if credentials:
-        for key, value in credentials.items():
-            prompt += f"{key.upper()}: {value}\n"
+        if isinstance(credentials, dict):
+            for key, value in credentials.items():
+                prompt += f"{key.upper()}: {value}\n"
+        elif isinstance(credentials, list):
+            for cred in credentials:
+                if isinstance(cred, dict):
+                    for key, value in cred.items():
+                        prompt += f"{key.upper()}: {value}\n"
+                else:
+                    prompt += f"CREDENTIAL: {cred}\n"
         prompt += "\n"
         prompt += "For SIGN-IN: Use the credentials above to log in.\n"
     else:
@@ -204,8 +212,16 @@ def convert_interactions_to_goal_driven_browser_prompt(
         prompt += "CREDENTIALS\n"
         prompt += "=" * 80 + "\n"
         prompt += "Use these credentials if authentication is required:\n"
-        for key, value in credentials.items():
-            prompt += f"{key.upper()}: {value}\n"
+        if isinstance(credentials, dict):
+            for key, value in credentials.items():
+                prompt += f"{key.upper()}: {value}\n"
+        elif isinstance(credentials, list):
+            for cred in credentials:
+                if isinstance(cred, dict):
+                    for key, value in cred.items():
+                        prompt += f"{key.upper()}: {value}\n"
+                else:
+                    prompt += f"CREDENTIAL: {cred}\n"
         prompt += "\n"
 
         prompt += "If login credentials are not provided or login fails, REGISTER a new account:\n"
