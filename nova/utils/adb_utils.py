@@ -57,7 +57,7 @@ def adbInstallApp(args):
             if response['status']:
                 nova_log('App installed successfully')
                 return
-            nova_log(f'App was not installed successfully. LLM replied - {response['rationale']}')
+            nova_log(f'''App was not installed successfully. LLM replied - {response['rationale']}''')
             nova_log('Installing the application')
             
             if retries == retry_limit:

@@ -105,7 +105,7 @@ def main():
     
     # Define message handler with health check integration
     def message_handler_with_health_check(message_data: dict) -> bool:
-        \"\"\"Message handler that waits for healthy emulator before processing.\"\"\"
+        """Message handler that waits for healthy emulator before processing."""
         wait_for_healthy_emulator()
         return process_message(message_data)
     

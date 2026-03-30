@@ -7,6 +7,34 @@ from pathlib import Path
 from tc_executor.logger_config import logger as system_logger
 
 _QAI_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_workspace_env() -> None:
+    env_path = _QAI_ROOT / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
+            value = value[1:-1]
+
+        os.environ.setdefault(key, value)
+
+
+_load_workspace_env()
+
 _ORIONIS_SRC = _QAI_ROOT / "orionis" / "src"
 if str(_ORIONIS_SRC) not in sys.path:
     sys.path.insert(0, str(_ORIONIS_SRC))

@@ -95,7 +95,7 @@ class ComputerTool(BaseAnthropicTool):
         **kwargs,
     ):
         print(
-            f"### Performing action: {action}{f", text: {text}" if text else ''}{f", coordinate: {coordinate}" if coordinate else ''}"
+            f"""### Performing action: {action}{f", text: {text}" if text else ''}{f", coordinates: {coordinate}" if coordinate else ''}"""
         )
         if action in ("mouse_move", "left_click_drag"):
             if coordinate is None:
