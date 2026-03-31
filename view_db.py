@@ -29,6 +29,7 @@ def pretty(obj):
 
 def main():
     db_path = resolve_db_path()
+    print(f"Using DB path: {db_path}")
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
