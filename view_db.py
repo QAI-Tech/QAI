@@ -7,9 +7,18 @@ Usage:
   python view_db.py Product 1          # show Product with ID 1
 """
 
+import os
 import sqlite3, pickle, json, sys
 
-DB_PATH = "qai-local.sqlite3"
+DB_PATH = "/app/.qai/sqlite/qai.sqlite3"
+FALLBACK_DB_PATH = "qai-local.sqlite3"
+
+
+def resolve_db_path():
+    """Prefer Docker DB path, fallback to local copied DB on host."""
+    if os.path.exists(DB_PATH):
+        return DB_PATH
+    return FALLBACK_DB_PATH
 
 def pretty(obj):
     """JSON-serialize with fallback for non-serializable types."""
@@ -19,7 +28,8 @@ def pretty(obj):
         return str(obj)
 
 def main():
-    conn = sqlite3.connect(DB_PATH)
+    db_path = resolve_db_path()
+    conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
     kind_filter = sys.argv[1] if len(sys.argv) > 1 else None
